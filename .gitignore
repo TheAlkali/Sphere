@@ -1,0 +1,10 @@
+sa/*
+dataset/*
+tmp/*
+bin/*
+*.txt
+*.sam
+test
+rapmap
+main
+*.o
