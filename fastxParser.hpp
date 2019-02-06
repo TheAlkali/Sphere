@@ -11,7 +11,7 @@
 #include <chrono>
 #include <cereal/archives/binary.hpp>
 
-#include "Utils.h"
+#include "Utils.hpp"
 
 #define READ std::string //falconn::DenseVector<float>//
 //#define PAIR_SEQ_LIST std::vector<std::pair<seqInfo, seqInfo> >
@@ -245,6 +245,35 @@ void store_ref_kmers(char * filename, int klen){
 	out_ref_file__.close();
 }
 
+// TODO delete
+void store_reads_name(char* filename1){
+	open_seqfile(filename1);
+	std::vector<std::string> name_vec_1;
+	std::string name_1;
+	std::string fqual;
+	READ first;
+	filetype__ filetype = get_file_type(seqfile__);
+	if (filetype == FASTQ){
+		while(seqfile__.peek() != EOF){
+	//	for (;size < TEST_READ;size++){
+			first.clear();
+			name_1.clear();
+			read_fq_oneseq(seqfile__,name_1,first,fqual);
+
+			name_vec_1.push_back(name_1);
+		}
+	}
+	std::cout << "- store reads name finshed "<< std::endl;
+	seqfile__.close();
+
+	//store reads name
+	{
+		std::ofstream reads_name_1(PAIR_1_NAME_FILE);
+		cereal::BinaryOutputArchive ar(reads_name_1);
+		ar(name_vec_1);
+	}
+}
+
 //directly store the reads to the files
 void store_reads(char* filename1, char* filename2,int klen){
 	open_seqfile(filename1,filename2);
@@ -261,7 +290,9 @@ void store_reads(char* filename1, char* filename2,int klen){
 	}
 
 	size_t size  = 0;
-	std::string name;
+	std::vector<std::string> name_vec_1;
+	std::string name_1;
+	std::string name_2;
 	std::string fqual;
 	std::string squal;
 	READ first;
@@ -276,8 +307,13 @@ void store_reads(char* filename1, char* filename2,int klen){
 	//	for (;size < TEST_READ;size++){
 			first.clear();
 			second.clear();
-			read_fq_oneseq(seqfile__,name,first,fqual);
-			read_fq_oneseq(seqfile2__,name,second,squal);
+			name_1.clear();
+			name_2.clear();
+			read_fq_oneseq(seqfile__,name_1,first,fqual);
+			read_fq_oneseq(seqfile2__,name_2,second,squal);
+
+			name_vec_1.push_back(name_1);
+
 			for (int i = 0; i < klen__; ++i){
 				out_read_file_1__ << (char)stoic_table[(int8_t)first[i]];
 			}
@@ -289,11 +325,18 @@ void store_reads(char* filename1, char* filename2,int klen){
 			out_read_file_2__ << std::endl;
 		}
 	}
-	std::cout << "total reads:" << size * 2 << std::endl;
+	std::cout << "- total reads:" << size * 2 << std::endl;
 	seqfile__.close();
 	seqfile2__.close();
 	out_read_file_1__.close();
 	out_read_file_2__.close();
+
+	//store reads name
+	{
+		std::ofstream reads_name_1(PAIR_1_NAME_FILE);
+		cereal::BinaryOutputArchive ar(reads_name_1);
+		ar(name_vec_1);
+	}
 }
 
 //store data to RAM

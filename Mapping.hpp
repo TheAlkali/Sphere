@@ -12,10 +12,12 @@
 #include "string.h"
 #include "Points.h"
 #include "BooPHF.h"
-#include "Utils.h"
+#include "Utils.hpp"
 #include "fastxParser.hpp"
-#include "samParser.hpp"
-#include <divsufsort.h>
+#include "SAMwriter.hpp"
+
+
+#include <divsufsort.h> 
 
 
 std::string refseq_file = "dataset/srrdata/true_ref_seq.txt";
@@ -431,7 +433,7 @@ int Hash_Mapping_with_SA(SphericalHashing &src_sh,Points &read_buff,int pair)
     }   
     Stopwatch T1("");
     T1.Reset();     T1.Start();
-    samParser sp;  
+    SAMwriter sp;  
     sp.gen_SAM_file(mres);
     printf("- Generate SAM File Finished (%f seconds)\n",T1.GetTime());
     T1.Stop();

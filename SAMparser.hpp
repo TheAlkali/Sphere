@@ -2,68 +2,24 @@
 #include <fstream>
 #include <sstream>
 #include <cereal/archives/binary.hpp>
-#include "spdlog/fmt/ostr.h"
-#include "spdlog/sinks/basic_file_sink.h"
 #include "fastxParser.hpp"
-#include "Utils.h"
+#include "Utils.hpp"
 
 /*#define REAL_TYPE int
 #define REF_LOCATION std::std::vector<int>
 
-struct read_mapped_ref{
-	std::vector<REF_LOCATION> locs_of_ref ;
-	std::string read_name;
-	std::vector<std::string> ref_name;
-};
+*/
 
-struct read_info{
-	REAL_TYPE **read_seq;
-	std::string *read_name;
-	int nP;
-	int dim;
-};*/
-
-struct SAM_format{
-	std::string qname;
-	std::string rname;
-	std::string cigar;
-	std::string rnext;
-	std::string seq;
-	std::string qual;
-	int flag;
-	int pos;
-	int mapq;
-	int pnext;
-	int tlen;
-	template<typename OStream>
-    friend OStream &operator<<(OStream &os, const SAM_format &s){	
-    	os << '*' << '\t' // QNAME
-			<< '*' << '\t' // FLAGS
-			<< s.rname << '\t' // RNAME
-			<< s.pos + 1 << '\t' // POS (1-based)
-			<< 255 << '\t' // MAPQ
-			<< '*' << '\t' // CIGAR
-			<< '*' << '\t' // MATE NAME
-			<< 0 << '\t' // MATE POS
-			<< s.tlen << '\t' // TLEN
-			<< '*' << '\t' // SEQ
-			<< "*\t" << '\n';// QSTR
-    }
-
-};
-
-class samParser
+class SAMparser
 {
 public:
-	mapped_res mres;
-	ref_pos rpos;
 	singleSeqList *reflist ;
 	int read_index;
 	int dim;
 	int nP;
 
 
-	samParser(){
+	SAMparser(){
 		reflist = new singleSeqList();
 		read_index = 0;
 		dim = 0;
@@ -84,71 +40,7 @@ public:
 		rmref = new read_mapped_ref[nP];*/
 	}
 
-	void read_mapped_info(){
-		{
-			std::ifstream refposfile(MERGE_REF_POS_FILE);
-			cereal::BinaryInputArchive ar_ref_pos(refposfile);
-			ar_ref_pos(rpos.ref_start,rpos.rname);
-		}
-	/*	{
-			std::ifstream locfile(PAIR_1_LOC_FILE);
-			cereal::BinaryInputArchive ar_loc(locfile);
-			ar_loc(mres.mapped_ref_loc);
-		}
-		{
-			std::ifstream disfile(PAIR_1_DIS_FILE);
-			cereal::BinaryInputArchive ar_dis(disfile);
-			ar_dis(mres.min_dis);
-		}*/
-		
-	}
 
-// TODO		
-	SAM_format gen_SAM_format(int read_idx,int map_loc){
-		
-		size_t ridx = 0;
-		for (int i = 0; i < rpos.ref_start.size(); ++i){
-			if (rpos.ref_start[i] > mres.mapped_ref_loc[read_idx][map_loc]){
-				ridx = i - 1;
-				break;
-			}else if(rpos.ref_start[i] == mres.mapped_ref_loc[read_idx][map_loc]){
-				ridx = i;
-			}
-		}
-
-		SAM_format sf;
-		sf.qname = "";
-		sf.rname = rpos.rname[ridx];
-		sf.cigar = "";
-		sf.rnext = "";
-		sf.seq = "";
-		sf.qual = "";
-		sf.tlen = DIM;
-
-		sf.flag = 0;
-		sf.pos = mres.mapped_ref_loc[read_idx][map_loc] - rpos.ref_start[ridx];
-		sf.mapq = 0;
-		sf.pnext = 0;
-		sf.tlen = 0;
-
-		return sf;
-	}
-// TODO
-	void gen_SAM_file(mapped_res &res){
-		mres = std::move(res);
-		read_mapped_info();
-		SAM_format sam;
-		auto write_sam_res = spdlog::basic_logger_mt("basic_logger",SAM_FILE_LOC);
-		for (int read_idx = 0; read_idx < mres.mapped_ref_loc.size(); ++read_idx)
-		{
-			for (int loc = 0; loc < mres.mapped_ref_loc[read_idx].size(); ++loc)
-			{
-				sam = gen_SAM_format(read_idx,loc);
-				write_sam_res->info(SAM_format{sam.qname,sam.rname,sam.cigar,sam.rnext,sam.seq,sam.qual,sam.flag,sam.pos,sam.mapq,sam.pnext,sam.tlen});
-			}
-		}
-		
-	}
 //-------------parse sam files-----------------------------
 	int get_refseq(std::string ref_name){
 		for (int i = 0; i < reflist->name.size(); ++i){

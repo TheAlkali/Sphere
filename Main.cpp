@@ -1,6 +1,6 @@
 #include "BinaryHash.h"
 #include "Evaluation.h"
-#include "Mapping.h"
+#include "Mapping.hpp"
 
 #ifdef USE_PARALLELIZATION
 #include <omp.h>

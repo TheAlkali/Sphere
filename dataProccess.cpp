@@ -3,8 +3,8 @@
 #include<time.h>
 //#include"kmerUtils.hpp"
 #include"fastxParser.hpp"
-#include"samParser.hpp"
-#include "Utils.h"
+#include"SAMparser.hpp"
+#include "Utils.hpp"
 
 //#include"benchmark.hpp"
 
@@ -33,7 +33,7 @@ int main(int argc, char const *argv[])
 			
 	if (gate == 0){		
 		//extract the mapping results of each aread to disk
-		samParser  sp;
+		SAMparser  sp;
 		char test_sam[] = "../rapmap-res/map-res/mapped_reads.sam";
 		char test_res[] = "rapmap_mapped_res.txt";
 		sp.get_Sam(ref,test_sam,test_res,20000,klen);
@@ -59,6 +59,8 @@ int main(int argc, char const *argv[])
 	}else if (gate == 7){
 		//ref kmer count:282626422
 		count_ref_kmer("dataset/ref_kmer.txt");
+	}else if (gate == 8){
+		store_reads_name(read1);
 	}
 
 	return 0;
