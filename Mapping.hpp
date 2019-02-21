@@ -381,8 +381,12 @@ void Mapping_Process(mapped_res &mres,region_info &rinfo,bitset<BCODE_LEN> bCode
 
 int Hash_Mapping_with_SA(SphericalHashing &src_sh,Points &read_buff,int pair)
 {
-    system("rm bin/*");
-    system("rm tmp/*");
+    if (pair == 1)
+    {
+        system("rm bin/*");
+        system("rm tmp/*");
+    }
+    
     int content = -1;
     std::string read;
 /*    {
@@ -396,7 +400,7 @@ int Hash_Mapping_with_SA(SphericalHashing &src_sh,Points &read_buff,int pair)
     read_buff.Initialize(READ_BUFFER_SIZE,DIM);
 
     std::vector<size_t> ref_loc;
-    mapped_res mres,mres_2;
+    mapped_res mres;
     while(content < 0)
     {
         Stopwatch T1("");
@@ -432,11 +436,6 @@ int Hash_Mapping_with_SA(SphericalHashing &src_sh,Points &read_buff,int pair)
         printf("- Mapping Time: Mapping Reads Through Hashcodes and SA Finished (%f seconds)\n",T1.GetTime());
     }   
     Stopwatch T1("");
-    T1.Reset();     T1.Start();
-    SAMwriter sp;  
-    sp.gen_SAM_file(mres);
-    printf("- Generate SAM File Finished (%f seconds)\n",T1.GetTime());
-    T1.Stop();
     //save to disk using cereal
     {
         std::string loc_fname;
@@ -450,7 +449,6 @@ int Hash_Mapping_with_SA(SphericalHashing &src_sh,Points &read_buff,int pair)
             loc_fname = PAIR_2_LOC_FILE;
             dis_fname = PAIR_2_DIS_FILE;
         }
-        
 
         std::ofstream tmp_loc_file(loc_fname,std::ios::binary|std::ios::app);
         std::ofstream tmp_dis_file(dis_fname,std::ios::binary|std::ios::app);
@@ -462,5 +460,6 @@ int Hash_Mapping_with_SA(SphericalHashing &src_sh,Points &read_buff,int pair)
     }
     T0.Stop();
     printf("- Total Mapping Time: (%f seconds)\n",T0.GetTime());
-
+ //   mres.mapped_ref_loc.~vector();
+ //   mres.min_dis.~vector();
 }

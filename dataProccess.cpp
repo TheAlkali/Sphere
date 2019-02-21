@@ -13,18 +13,19 @@ void gen_simulate_reads_From_TXT(int,int);
 void analyse_result(std::string,int);
 void count_ref_kmer(std::string);
 
-int main(int argc, char const *argv[])
+//int main(int argc, char const *argv[])
+int main()
 {
 //	kmerUtils kmutil;
 	int klen = 50;
 //	LSH lsh;
-	int gate = std::atoi(argv[1]);
+	int gate = 1;//std::atoi(argv[1]);
 
 	char ref[] = "../reference/transcripts/Homo_sapiens.GRCh38.cdna.all.fa";
-	char read1[] = "../reads/single-cell-data/SRR5337/SRR5337026_1.fastq";//"dataset/rapmap_reads_1.fastq";
-	//"/home/yxt/Documents/work/RNA-seq/reads/single-cell-data/SRR5337/SRR5337026_1.fastq";
+	char read1[] = "dataset/srrdata/SRR5337025_1.fastq";//"dataset/rapmap_reads_1.fastq";
+	//"/home/yxt/Documents/work/RNA-seq/reads/single-cell-data/SRR5337/SRR5337026_2_1.fastq";
 	//"/home/yxt/Documents/work/RNA-seq/reads/sim_reads_mismatch/sim_20M_1.fq";
-	char read2[] = "../reads/single-cell-data/SRR5337/SRR5337026_2.fastq";//"dataset/rapmap_reads_2.fastq";
+	char read2[] = "dataset/srrdata/SRR5337025_2.fastq";//"dataset/rapmap_reads_2.fastq";
 	//"/home/yxt/Documents/work/RNA-seq/reads/single-cell-data/SRR5337/SRR5337026_2.fastq";
 	//"/home/yxt/Documents/work/RNA-seq/reads/sim_reads_mismatch/sim_20M_2.fq";
 	singleSeqList *reflist = new singleSeqList();
@@ -39,6 +40,7 @@ int main(int argc, char const *argv[])
 		sp.get_Sam(ref,test_sam,test_res,20000,klen);
 	}else if (gate == 1){		
 		store_reads(read1,read2,klen);
+//		store_reads("../reads/single-cell-data/SRR5337/Simulate_GRCh38.1.fa",klen);
 //		store_ref_kmers(ref,klen);
 	}else if (gate == 2){		
 		gen_simulate_reads(read1,ref,reflist,klen);

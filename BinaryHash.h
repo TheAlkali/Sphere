@@ -134,21 +134,6 @@ public :
 		file.close();*/
 	}
 
-	__inline void Compute_BCode_for_BCode(bitset<BCODE_LEN> &x, bitset<BBCODE_LEN> &y)
-	{	
-		for(int i=0;i<BBCODE_LEN;i++)
-		{
-			if( Compute_Distance_L2Sq<REAL_TYPE>( s[i].c , x , ps->dim ) > s[i].rSq )
-			{
-				y[i] = 0;
-			}
-			else
-			{
-				y[i] = 1;
-			}
-		}
-	}
-
 	void Save_Sphere_Info(){
 		std::ofstream file;
 		file.open("tmp/sphere_info.log");

@@ -67,14 +67,14 @@ filetype__ get_file_type(std::ifstream &file){
 	
 }
 
-void open_seqfile(char* filename){
+void open_seqfile(std::string filename){
 	seqfile__.open(filename,std::ifstream::binary);//|std::fstream::in);
 	if(!seqfile__.is_open()){
 		std::cout<<"fail to open fasta/fastq files:" << filename << std::endl;
 	}
 }
 
-void open_seqfile(char* filename1,char* filename2){
+void open_seqfile(std::string filename1,std::string filename2){
 	seqfile__.open(filename1,std::ifstream::binary);//,std::fstream::in);
 	seqfile2__.open(filename2,std::ifstream::binary);//,std::fstream::in);
 	if(!seqfile__.is_open()){
@@ -155,7 +155,7 @@ void get_one_kmer(READ seq,int loc, bool if_out){
 	kmer_count__++;																																																																																																																																																																																																																																																										
 }
 
-std::string merge_ref_seq(char *filename){
+std::string merge_ref_seq(std::string filename){
 	open_seqfile(filename);
 	filetype__ filetype = get_file_type(seqfile__);
 
@@ -165,7 +165,7 @@ std::string merge_ref_seq(char *filename){
 	std::string seq,all_seq;
 	int len = 0;
 
-	ref_pos rpos;
+	ref_start_name rpos;
 
 	auto t1 = std::chrono::high_resolution_clock::now();
 	for (size  = 0;seqfile__.peek() != EOF;size++){
@@ -194,8 +194,8 @@ std::string merge_ref_seq(char *filename){
 	// save ref position in merged seq to disk
 	t1 = std::chrono::high_resolution_clock::now();
 	{
-		std::ofstream ref_pos(MERGE_REF_POS_FILE);
-		cereal::BinaryOutputArchive ar(ref_pos);
+		std::ofstream ref_start_name(MERGE_REF_POS_FILE);
+		cereal::BinaryOutputArchive ar(ref_start_name);
 		ar(CEREAL_NVP(rpos.ref_start),CEREAL_NVP(rpos.rname));
 	}
 	t2 = std::chrono::high_resolution_clock::now();
@@ -206,7 +206,7 @@ std::string merge_ref_seq(char *filename){
 }
 
 // directly store the ref kmers to the file
-void store_ref_kmers(char * filename, int klen){
+void store_ref_kmers(std::string filename, int klen){
 	open_seqfile(filename);
 	filetype__ filetype = get_file_type(seqfile__);
 
@@ -246,7 +246,7 @@ void store_ref_kmers(char * filename, int klen){
 }
 
 // TODO delete
-void store_reads_name(char* filename1){
+void store_reads_name(std::string filename1){
 	open_seqfile(filename1);
 	std::vector<std::string> name_vec_1;
 	std::string name_1;
@@ -275,18 +275,18 @@ void store_reads_name(char* filename1){
 }
 
 //directly store the reads to the files
-void store_reads(char* filename1, char* filename2,int klen){
-	open_seqfile(filename1,filename2);
+void store_reads(){
+	open_seqfile(RAW_READ_FILE_1,RAW_READ_FILE_2);
 
-	klen__ = klen;
+	klen__ = DIM;
 
-	out_read_file_1__.open("dataset/srr25_1.txt",std::ofstream::out);
-	out_read_file_2__.open("dataset/srr25_2.txt",std::ofstream::out);
+	out_read_file_1__.open(INPUT_READ_FILE_NAME_1,std::ofstream::out);
+	out_read_file_2__.open(INPUT_READ_FILE_NAME_2,std::ofstream::out);
 	if (!out_read_file_1__.is_open()){
-		std::cerr << "can't open out_read_file: read_1.txt" << std::endl;
+		std::cerr << "can't open out_read_file: srr25_1.txt" << std::endl;
 	}
 	if (!out_read_file_2__.is_open()){
-		std::cerr << "can't open out_read_file: read_2.txt" << std::endl;
+		std::cerr << "can't open out_read_file: srr25_2.txt" << std::endl;
 	}
 
 	size_t size  = 0;
@@ -314,13 +314,17 @@ void store_reads(char* filename1, char* filename2,int klen){
 
 			name_vec_1.push_back(name_1);
 
+			std::string rc_first;
+			reverse_complete(first,rc_first);
 			for (int i = 0; i < klen__; ++i){
-				out_read_file_1__ << (char)stoic_table[(int8_t)first[i]];
+				out_read_file_1__ << rc_first[i];
 			}
 			out_read_file_1__ << std::endl;
 		
+			// pair 2 reverse complete
+			
 			for (int i = 0; i < klen__; ++i){
-				out_read_file_2__ << (char)stoic_table[(int8_t)second[i]];
+				out_read_file_2__ << stoic_table[(int8_t)second[i]];
 			}
 			out_read_file_2__ << std::endl;
 		}
@@ -330,6 +334,54 @@ void store_reads(char* filename1, char* filename2,int klen){
 	seqfile2__.close();
 	out_read_file_1__.close();
 	out_read_file_2__.close();
+
+	//store reads name
+	{
+		std::ofstream reads_name_1(PAIR_1_NAME_FILE);
+		cereal::BinaryOutputArchive ar(reads_name_1);
+		ar(name_vec_1);
+	}
+}
+
+//directly store the reads to the files
+void store_reads(char* filename,int klen){
+	open_seqfile(filename);
+
+	klen__ = klen;
+
+	out_read_file_1__.open("dataset/ref_sim.txt",std::ofstream::out);
+	if (!out_read_file_1__.is_open()){
+		std::cerr << "can't open out_read_file: read_1.txt" << std::endl;
+	}
+
+	size_t size  = 0;
+	std::vector<std::string> name_vec_1;
+	std::string name_1;
+	std::string fqual;
+	std::string squal;
+	READ first;
+	std::pair<READ,READ> seqpair;
+	std::pair<std::string,std::string> qualpair;
+
+	filetype__ filetype = get_file_type(seqfile__);
+	if (filetype == FASTQ){
+		for (;seqfile__.peek() != EOF;size++){
+	//	for (;size < TEST_READ;size++){
+			first.clear();
+			name_1.clear();
+			read_fq_oneseq(seqfile__,name_1,first,fqual);
+
+			name_vec_1.push_back(name_1);
+
+			for (int i = 0; i < klen__; ++i){
+				out_read_file_1__ << (char)stoic_table[(int8_t)first[i]];
+			}
+			out_read_file_1__ << std::endl;
+		}
+	}
+	std::cout << "- total reads:" << size << std::endl;
+	seqfile__.close();
+	out_read_file_1__.close();
 
 	//store reads name
 	{

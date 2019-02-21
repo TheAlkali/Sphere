@@ -1,6 +1,7 @@
 #include "BinaryHash.h"
 #include "Evaluation.h"
 #include "Mapping.hpp"
+#include "fastxParser.hpp"
 
 #ifdef USE_PARALLELIZATION
 #include <omp.h>
@@ -52,25 +53,25 @@ void output_result(std::string readfile,std::string locfile,std::string disfile,
 //	unsigned long ref_code;
 	std::string tmp_ref,tmp_read; 
 	// load mapping result from disk using cereal
-	mapped_res mres_1,mres_2;
+	mapped_res mres;
 	{
 		cereal::BinaryInputArchive ar_loc(tmp_loc);
 		cereal::BinaryInputArchive ar_dis(tmp_dis);
-		ar_loc(CEREAL_NVP(mres_1.mapped_ref_loc));
-		ar_dis(CEREAL_NVP(mres_1.min_dis));
+		ar_loc(CEREAL_NVP(mres.mapped_ref_loc));
+		ar_dis(CEREAL_NVP(mres.min_dis));
 	};
 
 	Stopwatch T0("");
 	T0.Reset();		T0.Start();
-	std::cout << mres_1.mapped_ref_loc.size() << std::endl;
-	for (unsigned int qIndex = 0;qIndex < mres_1.mapped_ref_loc.size();++qIndex)
+	std::cout << mres.mapped_ref_loc.size() << std::endl;
+	for (unsigned int qIndex = 0;qIndex < mres.mapped_ref_loc.size();++qIndex)
 //	for (unsigned int qIndex = 0;qIndex < 1;++qIndex)
 	{
 		// output results  that the distance is  1
 		getline(read,tmp_read);
-	//	if (mres_1.min_dis[qIndex] <= 20)
+	//	if (mres.min_dis[qIndex] <= 20)
 		{	
-			output << '>' << qIndex + 1  << ":" << mres_1.min_dis[qIndex] << ":" << std::endl;
+			output << '>' << qIndex + 1  << ":" << mres.min_dis[qIndex] << ":" << std::endl;
 		//	output << bCodeRead_SH[qIndex] << std::endl;
 			output << "= " ;//<< tmp_read << std::endl;
 
@@ -82,10 +83,10 @@ void output_result(std::string readfile,std::string locfile,std::string disfile,
 			output << std::endl;
 		//	std::cout << std::endl;
 			
-		//	std::cout << mres_1.mapped_ref_loc[qIndex].size() << std::endl;
-			for (unsigned int i = 0; i < mres_1.mapped_ref_loc[qIndex].size(); ++i)
+		//	std::cout << mres.mapped_ref_loc[qIndex].size() << std::endl;
+			for (unsigned int i = 0; i < mres.mapped_ref_loc[qIndex].size(); ++i)
 			{
-				ref_loc = mres_1.mapped_ref_loc[qIndex][i];
+				ref_loc = mres.mapped_ref_loc[qIndex][i];
 				//------ seek with sa------
 				char base;
 				output << "+ ";	
@@ -114,6 +115,8 @@ int main()
 //	system("rm tmp/*.log");
 	Stopwatch T0("");
     T0.Reset();     T0.Start();
+    store_reads();
+
 //	Suffix_Array();
     Load_SA();
 
@@ -146,20 +149,24 @@ int main()
 	Initialize_Ref_Data(NUM_TRAIN_SAMPLES);
 	Learn_Spherical_Hashing(src_sh,ref_buff,BCODE_LEN);
 
-//	Initialize_Bcode_Data();
-//	Learn_Spherical_Hashing(bcode_sh,train_bcode_P,BBCODE_LEN);
+
 
 	ref_buff.srcfile.close();
 	ref_buff.srcfile.open(INPUT_REF_FILE_NAME,std::ifstream::in);
 
-//	Hash_Mapping();
 	Hash_Mapping_with_SA(src_sh,read_buff_1,PAIR_1);
-//	Hash_Mapping_with_SA(src_sh,read_buff_2,DIM,PAIR_2);
+	Hash_Mapping_with_SA(src_sh,read_buff_2,PAIR_2);
 	T0.Stop();
 	printf("- Total Running Time (%f seconds)\n",T0.GetTime() );
 
+	T0.Reset();     T0.Start();
+ 	SAMwriter sp;  
+    sp.gen_SAM_file();
+    printf("- Generate SAM File Finished (%f seconds)\n",T0.GetTime());
+    T0.Stop();
+	
 	output_result(INPUT_READ_FILE_NAME_1,PAIR_1_LOC_FILE,PAIR_1_DIS_FILE,PAIR_1_RES_FILE);
-//	output_result(INPUT_READ_FILE_NAME_2,PAIR_2_LOC_FILE,PAIR_2_DIS_FILE,PAIR_2_RES_FILE);
+	output_result(INPUT_READ_FILE_NAME_2,PAIR_2_LOC_FILE,PAIR_2_DIS_FILE,PAIR_2_RES_FILE);
 		
 	return 0;
 }
