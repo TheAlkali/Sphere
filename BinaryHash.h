@@ -17,48 +17,6 @@ __inline double Compute_SHD(bitset<BCODE_LEN> &a, bitset<BCODE_LEN> &b)
 	return ( ( (double)( ( a ^ b ).count() ) ) / ( (double)( ( a & b ).count() ) + 0.1 ) );
 }
 
-class LSH
-{
-public :
-	int dim;
-	REAL_TYPE **pM;
-
-	void Initialize(int _dim)
-	{
-		dim = _dim;
-		pM = new REAL_TYPE * [ dim ];
-		for(int k=0;k<dim;k++)
-		{
-			pM[k] = new REAL_TYPE [ BCODE_LEN ];
-			for(int i=0;i<BCODE_LEN;i++)
-			{
-				pM[k][i] = Rand_Gaussian<REAL_TYPE>();
-			}
-		}
-	}
-
-	__inline void Compute_BCode(REAL_TYPE *x, bitset<BCODE_LEN> &y)
-	{
-		REAL_TYPE tmp;
-		for(int i=0;i<BCODE_LEN;i++)
-		{
-			tmp = 0.0;
-			for(int k=0;k<dim;k++)
-			{
-				tmp += x[k] * pM[k][i];
-			}
-			if( tmp > 0.0 )
-			{
-				y[i] = 1;
-			}
-			else
-			{
-				y[i] = 0;
-			}
-		}
-	}
-};
-
 class Index_Distance
 {
 public :
@@ -108,6 +66,7 @@ public :
 	void Set_Spheres();
 
 	void ReleaseMem();
+
 	template<typename ArgType>
 	__inline void Compute_BCode(ArgType *x, bitset<BCODE_LEN> &y)
 	{
@@ -120,7 +79,6 @@ public :
 		{
 			ArgType dis = Compute_Distance_L2Sq<REAL_TYPE>( s[i].c , x , ps->dim );
 			if( dis > s[i].rSq )
-		//	if( Compute_Edit_Distance<REAL_TYPE>( s[i].c , x , ps->dim ) > s[i].rSq )
 			{
 				y[i] = 0;
 			}
@@ -134,7 +92,8 @@ public :
 		file.close();*/
 	}
 
-	void Save_Sphere_Info(){
+	void Save_Sphere_Info()
+	{
 		std::ofstream file;
 		file.open("tmp/sphere_info.log");
 		for (int i = 0; i < BCODE_LEN; ++i)

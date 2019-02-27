@@ -1,5 +1,6 @@
 sa/*
 dataset/*
+res/*
 tmp/*
 bin/*
 *.txt
@@ -9,3 +10,8 @@ rapmap
 main
 *.o
 .gitignore
+bowtie2test.cpp
+bowtie2test
+rapmaptest.cpp
+rapmaptest
+

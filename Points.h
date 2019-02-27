@@ -12,7 +12,6 @@ public :
 	int dim;
 	REAL_TYPE **d;
 	std::ifstream srcfile;
-	std::fstream codefile;
 	
 	void Initialize(int _nP, int _dim)
 	{
@@ -35,6 +34,7 @@ public :
 	{
 		std::string tmp;
 		int i;
+		int part = dim / BCODE_LEN;
 		for(i=0;i<nP && srcfile.peek() != EOF;i++)
 		{
 			std::getline(srcfile,tmp);

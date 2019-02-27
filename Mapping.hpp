@@ -8,6 +8,7 @@
 #include <cereal/archives/xml.hpp>
 #include <cereal/types/memory.hpp>
 #include <cereal/types/vector.hpp>
+#include <cereal/types/bitset.hpp>
 
 #include "string.h"
 #include "Points.h"
@@ -69,7 +70,7 @@ void Load_SA()
     T0.Stop();
     printf("- Load Suffix Array Finished (%f seconds)\n",T0.GetTime());
 
-    // ;pad SA region
+    // load SA region
     T0.Reset();     T0.Start();
     {
         std::ifstream region_file("sa/ref_suffix_region.bin");
@@ -158,13 +159,15 @@ void Suffix_Array()
     printf("- Constructing Suffix Array Finished (%f seconds)\n",T0.GetTime());
 
     // save SA to disk
+    T0.Reset();     T0.Start();
     sarry.tran2vec();
     {    
         std::ofstream safile("sa/sa_idx.bin");
         cereal::BinaryOutputArchive ar(safile);
         ar(CEREAL_NVP(sarry.con));
-        std::cout << "- Save SA Finished" << std::endl;
     }
+     T0.Stop();
+    printf("- Save SA Finished (%f seconds)\n",T0.GetTime());
 
     // generate rpro according to the first kmer in reads. KMER_SIZE = 5
     std::vector<std::string> region_seq;
@@ -225,17 +228,17 @@ void Suffix_Array()
     T1.Stop();
     printf("- Computing Hashcode Of Ref Kmer Using BBhash Finished (%f seconds)\n",T1.GetTime());
 
-    std::ofstream region_file("sa/ref_suffix_region.txt");
+//    std::ofstream region_file("sa/ref_suffix_region.txt");
     uint64_t idx;
     for (unsigned int i = 0; i < rpro.region_start_idx.size(); ++i)
     {
         idx = bphf->lookup(region_seq[i]);
-        region_file << rpro.region_start_idx[i] << "\t" << rpro.region_end_idx[i] << "\t" << region_seq[i] << "\t" << idx 
-                    << "\t" << "0" << std::endl;
+        //region_file << rpro.region_start_idx[i] << "\t" << rpro.region_end_idx[i] << "\t" << region_seq[i] << "\t" << idx 
+        //            << "\t" << "0" << std::endl;
         rpro.rkmer_idx.push_back(idx);
         rpro.region_visited.push_back(0);
     }
-    region_file.close();
+ //   region_file.close();
 
     //save sa region profile to disk using cereal
     {
@@ -266,7 +269,6 @@ region_info Get_Read_Region(REAL_TYPE *read)
 {
     region_info rinfo;
     std::fstream region_file;
-//  region_file.open("sa_ptr/ref_suffix_region.txt",std::ios_base::in | std::ios_base::out);
 
     std::string kmer;
     REAL_TYPE_to_String(kmer,read);
@@ -277,8 +279,6 @@ region_info Get_Read_Region(REAL_TYPE *read)
     {
         if(rpro.rkmer_idx[i] == rkmer_idx)
         {
-//            std::cout << i << "\t" << rpro.region_start_idx[i] << "\t" << rpro.region_end_idx[i] << std::endl;
-
             auto size = rpro.region_end_idx[i] - rpro.region_start_idx[i]; 
             rinfo.region_start_idx = rpro.region_start_idx[i];
             rinfo.region_visited = rpro.region_visited[i];
@@ -299,110 +299,33 @@ region_info Get_Read_Region(REAL_TYPE *read)
     return rinfo;
 }
 
-void Mapping_Process(mapped_res &mres,region_info &rinfo,bitset<BCODE_LEN> bCodeRead,SphericalHashing &src_sh)
+void Compute_Ref_Code(SphericalHashing &src_sh,Points &read_buff,int pair)
 {
-    // mapping location in ref
-    std::vector<size_t> ref_loc;
-    bitset<BCODE_LEN> bCodeRef;
-    if(rinfo.idx_set.size() != 0)
-    {
-        ref_loc.clear();
-        int min_dis = 1000;
-
-        std::string fname = "bin/";
-        fname.append(std::to_string(rinfo.region_start_idx));
-        fname.append(".bin");
-
-        // if region hasn't been visited, computing their hashcode
-        if (!rinfo.region_visited)
-        {                
-            std::ofstream recode_file; 
-            recode_file.open(fname);
-            if(!recode_file.is_open())
-            {
-                perror(fname.c_str());
-            }
-            for (unsigned int i = 0; i < rinfo.idx_set.size(); ++i)
-            {
-                REAL_TYPE *seq = new REAL_TYPE[DIM];
-                for (int j = 0; j < DIM; ++j)
-                {
-                    seq[j] = (REAL_TYPE)(ref_string[rinfo.idx_set[i] + j] - 48);
-                   // std::cout << seq[j];
-                }
-                //std::cout << std::endl;
-                src_sh.Compute_BCode(seq,bCodeRef);
-                recode_file << bCodeRef << std::endl;         
-                
-                // compute distance
-                int dist = Compute_HD(bCodeRead,bCodeRef);
-                if (min_dis > dist)
-                {
-                    min_dis = std::move(dist);
-                    ref_loc.clear();
-                    ref_loc.push_back(rinfo.idx_set[i]);
-                }else if (min_dis == dist)
-                {
-                    ref_loc.push_back(rinfo.idx_set[i]);
-                }
-            
-            }
-            recode_file.close();
-        }else if(rinfo.region_visited)
-        {
-            std::string code;
-            std::ifstream recode_file;
-            recode_file.open(fname);
-            if(!recode_file.is_open())
-            {
-                perror(fname.c_str());
-            }
-            for (unsigned int i = 0; i < rinfo.idx_set.size(); ++i)
-            {            
-                getline(recode_file,code);
-                bCodeRef = String2Bit<BCODE_LEN>(code);
-                int dist = Compute_HD(bCodeRead,bCodeRef);
-                if (min_dis > dist)
-                {
-                    min_dis = std::move(dist);
-                    ref_loc.clear();
-                    ref_loc.push_back(rinfo.idx_set[i]);
-                }else if (min_dis == dist)
-                {
-                    ref_loc.push_back(rinfo.idx_set[i]);
-                }
-            } 
-            recode_file.close();
-        }    
-        mres.mapped_ref_loc.push_back(ref_loc);
-        mres.min_dis.push_back(min_dis);
-    }
-}
-
-int Hash_Mapping_with_SA(SphericalHashing &src_sh,Points &read_buff,int pair)
-{
+    // save read region to disk
+    std::ofstream read_region_file;
     if (pair == 1)
     {
         system("rm bin/*");
         system("rm tmp/*");
+        read_region_file.open(PAIR_1_REGION_FILE,std::ios::binary|std::ios::app);
+    }else if (pair == 2)
+    {
+        read_region_file.open(PAIR_2_REGION_FILE,std::ios::binary|std::ios::app);
     }
     
     int content = -1;
     std::string read;
-/*    {
-        cereal::BinaryInputArchive ar(ref_seq);
-        ar(ref_string);
-    }*/
 
     Stopwatch T0("");
     T0.Reset();     T0.Start();
     read_buff.srcfile.clear();
     read_buff.Initialize(READ_BUFFER_SIZE,DIM);
 
-    std::vector<size_t> ref_loc;
-    mapped_res mres;
+    std::vector<region_info> read_region;
     while(content < 0)
     {
+        
+
         Stopwatch T1("");
         T1.Reset();     T1.Start();
         content = read_buff.Initialize_From_File(); 
@@ -415,9 +338,140 @@ int Hash_Mapping_with_SA(SphericalHashing &src_sh,Points &read_buff,int pair)
         {
             size = content;
         }
-        printf("- Loading Reads Data In Buffer Finished (%f seconds)\n",T1.GetTime());
         
-        T1.Reset();     T1.Start();
+        region_info rinfo;
+        for (int i = 0; i < size; ++i)
+        {
+
+            rinfo.idx_set.clear();
+            rinfo = Get_Read_Region(read_buff.d[i]);
+
+            read_region.push_back(rinfo);    
+
+            if (rinfo.region_visited == 0)
+            {
+                std::string fname = "bin/";
+                fname.append(std::to_string(rinfo.region_start_idx));
+                fname.append(".bin");
+                std::ofstream recode_file; 
+                recode_file.open(fname);
+                if(!recode_file.is_open())
+                {
+                    perror(fname.c_str());
+                }
+                std::vector<bitset<BCODE_LEN>> bCodeRef_vec;
+                for (unsigned int i = 0; i < rinfo.idx_set.size(); ++i)
+                {
+                    REAL_TYPE *seq = new REAL_TYPE[DIM];
+                    for (int j = 0; j < DIM; ++j)
+                    {
+                        seq[j] = (REAL_TYPE)(ref_string[rinfo.idx_set[i] + j] - 48);
+                    }
+                    bitset<BCODE_LEN> bCodeRef;
+                    src_sh.Compute_BCode(seq,bCodeRef);
+                    bCodeRef_vec.push_back(bCodeRef);            
+                }
+                // save region seq hashcode
+                {
+                    cereal::BinaryOutputArchive ar(recode_file);
+                    ar(CEREAL_NVP(bCodeRef_vec));
+                }
+            }    
+        }
+    }
+  // save read region info 
+    {
+         cereal::BinaryOutputArchive ar(read_region_file);
+         ar(read_region);
+    }
+}
+
+void Mapping_Process(mapped_res &mres,region_info read_region,bitset<BCODE_LEN> bCodeRead,SphericalHashing &src_sh)
+{
+    // mapping location in ref
+    std::vector<size_t> ref_loc;
+    bitset<BCODE_LEN> bCodeRef;
+
+    if(read_region.idx_set.size() != 0)
+    {
+        ref_loc.clear();
+        int min_dis = 1000;
+
+        std::string fname = "bin/";
+        fname.append(std::to_string(read_region.region_start_idx));
+        fname.append(".bin");
+
+        std::vector<bitset<BCODE_LEN>> ref_code;
+        std::ifstream recode_file;
+        recode_file.open(fname);
+        if(!recode_file.is_open())
+        {
+            perror(fname.c_str());
+        }
+        {
+            cereal::BinaryInputArchive ar(recode_file);
+            ar(ref_code);
+        }
+        for (unsigned int i = 0; i < ref_code.size(); ++i)
+        {            
+            int dist = Compute_HD(bCodeRead,ref_code[i]);
+            if (min_dis > dist)
+            {
+                min_dis = std::move(dist);
+                ref_loc.clear();
+                ref_loc.push_back(read_region.idx_set[i]);
+            }else if (min_dis == dist)
+            {
+                ref_loc.push_back(read_region.idx_set[i]);
+            }
+        } 
+        recode_file.close();
+        mres.mapped_ref_loc.push_back(ref_loc);
+        mres.min_dis.push_back(min_dis);
+    }
+
+}
+
+
+
+int Hash_Mapping_with_SA(SphericalHashing &src_sh,Points &read_buff,int pair)
+{
+    std::ifstream read_region_file;
+    std::vector<region_info> read_region;
+    if (pair == 1)
+    {
+        read_region_file.open(PAIR_1_REGION_FILE);
+        cereal::BinaryInputArchive ar(read_region_file);
+        ar(read_region);
+    }else if(pair == 2)
+    {
+        read_region_file.open(PAIR_2_REGION_FILE);
+        cereal::BinaryInputArchive ar(read_region_file);
+        ar(read_region);
+    }
+    
+    int content = -1;
+    std::string read;
+
+    Stopwatch T0("");
+    T0.Reset();     T0.Start();
+    read_buff.srcfile.clear();
+    read_buff.Initialize(READ_BUFFER_SIZE,DIM);
+
+    std::vector<size_t> ref_loc;
+    mapped_res mres;
+    int read_region_count = 0;
+    while(content < 0)
+    {
+        content = read_buff.Initialize_From_File(); 
+        int size;
+        if (content == -1)
+        {
+            size = READ_BUFFER_SIZE;
+        }else 
+        {
+            size = content;
+        }
         
         region_info rinfo;
         for (int i = 0; i < size; ++i)
@@ -428,38 +482,34 @@ int Hash_Mapping_with_SA(SphericalHashing &src_sh,Points &read_buff,int pair)
             src_sh.Compute_BCode<REAL_TYPE>(read_buff.d[i], bCodeRead);
 
             rinfo.idx_set.clear();
-            //std::cout << "---" << i << std::endl;
-            rinfo = Get_Read_Region(read_buff.d[i]);
-            Mapping_Process(mres,rinfo,bCodeRead,src_sh);
+
+            Mapping_Process(mres,read_region[read_region_count],bCodeRead,src_sh);
+            read_region_count++;
         }
-        T1.Stop();
-        printf("- Mapping Time: Mapping Reads Through Hashcodes and SA Finished (%f seconds)\n",T1.GetTime());
+         //save to disk using cereal
+        {
+            std::string loc_fname;
+            std::string dis_fname;
+            if (pair == 1)
+            {
+                loc_fname = PAIR_1_LOC_FILE;
+                dis_fname = PAIR_1_DIS_FILE;
+            }else if(pair == 2)
+            {
+                loc_fname = PAIR_2_LOC_FILE;
+                dis_fname = PAIR_2_DIS_FILE;
+            }
+
+            std::ofstream tmp_loc_file(loc_fname,std::ios::binary|std::ios::app);
+            std::ofstream tmp_dis_file(dis_fname,std::ios::binary|std::ios::app);
+            cereal::BinaryOutputArchive ar_loc(tmp_loc_file);
+            cereal::BinaryOutputArchive ar_dis(tmp_dis_file);
+
+            ar_loc(CEREAL_NVP(mres.mapped_ref_loc));
+            ar_dis(CEREAL_NVP(mres.min_dis));
+        }
     }   
-    Stopwatch T1("");
-    //save to disk using cereal
-    {
-        std::string loc_fname;
-        std::string dis_fname;
-        if (pair == 1)
-        {
-            loc_fname = PAIR_1_LOC_FILE;
-            dis_fname = PAIR_1_DIS_FILE;
-        }else if(pair == 2)
-        {
-            loc_fname = PAIR_2_LOC_FILE;
-            dis_fname = PAIR_2_DIS_FILE;
-        }
-
-        std::ofstream tmp_loc_file(loc_fname,std::ios::binary|std::ios::app);
-        std::ofstream tmp_dis_file(dis_fname,std::ios::binary|std::ios::app);
-        cereal::BinaryOutputArchive ar_loc(tmp_loc_file);
-        cereal::BinaryOutputArchive ar_dis(tmp_dis_file);
-
-        ar_loc(CEREAL_NVP(mres.mapped_ref_loc));
-        ar_dis(CEREAL_NVP(mres.min_dis));
-    }
+   
     T0.Stop();
     printf("- Total Mapping Time: (%f seconds)\n",T0.GetTime());
- //   mres.mapped_ref_loc.~vector();
- //   mres.min_dis.~vector();
 }

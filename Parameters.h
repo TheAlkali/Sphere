@@ -23,7 +23,7 @@
 
 #define MAX_NUM_ITERATIONS		50
 
-#define INPUT_REF_FILE_NAME		"dataset/ref238956.txt"	//
+#define INPUT_REF_FILE_NAME		"dataset/training_data.txt"	//
 #define TRANSCRIPTS_FILE_NAME	"../reference/transcripts/Homo_sapiens.GRCh38.cdna.all.fa"//"dataset/rapmap_transcripts.fasta"
 #define TRANSCRIPTS_STRING_FILE "dataset/srrdata/true_ref_seq.txt"//"dataset/all_ref_seq.txt"
 
@@ -39,6 +39,8 @@
 
 #define PAIR_1 					1
 #define PAIR_2 					2
+#define PAIR_1_REGION_FILE		"tmp/tmp_region_1.bin"
+#define PAIR_2_REGION_FILE		"tmp/tmp_region_2.bin"
 #define PAIR_1_LOC_FILE			"tmp/tmp_loc_1.bin"	
 #define PAIR_2_LOC_FILE			"tmp/tmp_loc_2.bin"
 #define PAIR_1_DIS_FILE			"tmp/tmp_dis_1.bin"

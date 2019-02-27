@@ -167,10 +167,26 @@ std::string merge_ref_seq(std::string filename){
 
 	ref_start_name rpos;
 
+	std::ofstream train_data(INPUT_REF_FILE_NAME);
+	int train_num = 0;
+
 	auto t1 = std::chrono::high_resolution_clock::now();
 	for (size  = 0;seqfile__.peek() != EOF;size++){
 		seq.clear();
 		read_fa_oneseq(seqfile__,name,seq);
+		// generate training data
+		if(seq.length() > DIM && train_num < 1000)
+		{
+			train_num++;
+			int rand_loc = rand() % (seq.length() - DIM + 1);
+			std::string train_read = seq.substr(rand_loc,DIM);
+			for (int i = 0; i < DIM; ++i)
+			{
+				char tmp = (char)stoic_table[(int8_t)train_read[i]];
+				train_data << tmp;
+			}
+			train_data << std::endl;
+		}
 		rpos.rname.push_back(name);
 		rpos.ref_start.push_back(len);
 		len += seq.size() + 1;
@@ -183,7 +199,7 @@ std::string merge_ref_seq(std::string filename){
 	auto t2 = std::chrono::high_resolution_clock::now();
 	double fastxparser_time = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1).count();
 	std::cout << "- Total Transcriptomes:" << size << std::endl;
-	std::cout << "- Time Of Merging Tef Fasta:" << fastxparser_time << std::endl;
+	std::cout << "- Time Of Merging Ref Fasta and Generating Training Data (" << fastxparser_time << " seconds)" << std::endl;
 
 	// save merge seq to disk
 /*	{
@@ -202,6 +218,7 @@ std::string merge_ref_seq(std::string filename){
 	fastxparser_time = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1).count();
 	std::cout << "- Time Of Saving Reference Position In Merged Ref:" << fastxparser_time << std::endl;
 	seqfile__.close();
+	train_data.close();
 	return all_seq;
 }
 

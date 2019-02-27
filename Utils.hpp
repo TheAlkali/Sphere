@@ -96,8 +96,14 @@ public:
 struct region_info
 {
     std::vector<size_t> idx_set;
-    size_t region_start_idx;
-    int region_visited;
+    int region_start_idx;
+    int region_visited = 0;
+
+    template<class Archive>
+    void serialize(Archive &ar)
+    {
+        ar(idx_set,region_start_idx,region_visited);
+    }
 };
 
 struct region_profile

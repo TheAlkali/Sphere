@@ -18,7 +18,7 @@ Points ref_buff, read_buff_1,read_buff_2;
 
 SphericalHashing src_sh;
 
-int Initialize_Ref_Data(size_t buff_size)
+int initialize_ref_data(size_t buff_size)
 {
 #ifdef INPUT_REF_FILE_NAME
 	ref_buff.Initialize(buff_size,DIM);
@@ -29,7 +29,8 @@ int Initialize_Ref_Data(size_t buff_size)
 	return file_end;
 }
 
-void Learn_Spherical_Hashing(SphericalHashing &sh,Points &buff,int code_len){
+void learn_spherical_hashing(SphericalHashing &sh,Points &buff,int code_len)
+{
 	Stopwatch T0("");
 	sh.Initialize(&buff,code_len);
 	T0.Reset();		T0.Start();
@@ -40,7 +41,8 @@ void Learn_Spherical_Hashing(SphericalHashing &sh,Points &buff,int code_len){
 }
 
 // TODO pair end read result output
-void output_result(std::string readfile,std::string locfile,std::string disfile,std::string resfile){
+void output_result(std::string readfile,std::string locfile,std::string disfile,std::string resfile)
+{
 
 	std::ofstream output(resfile);
 	std::ifstream read(readfile);
@@ -115,19 +117,19 @@ int main()
 //	system("rm tmp/*.log");
 	Stopwatch T0("");
     T0.Reset();     T0.Start();
+
+    Stopwatch T1("");
+    T1.Reset();     T1.Start();
     store_reads();
 
 //	Suffix_Array();
     Load_SA();
-
 	srand( (unsigned int)( time(NULL) ) );
 
 	ref_buff.srcfile.open(INPUT_REF_FILE_NAME,std::ifstream::in);
 	read_buff_1.srcfile.open(INPUT_READ_FILE_NAME_1,std::ifstream::in);
 	read_buff_2.srcfile.open(INPUT_READ_FILE_NAME_2,std::ifstream::in);
-
-	//ref_buff.codefile.open(OUTPUT_REF_HASH_FILE_NAME,std::ios::out);//|std::ios::binary);
-	//read_buff_1.codefile.open(OUTPUT_READ_HASH_FILE_NAME,std::ios::out);//|std::ios::binary);
+	
 	if (!ref_buff.srcfile.is_open())
 	{
 		perror(INPUT_REF_FILE_NAME);
@@ -146,13 +148,22 @@ int main()
 
 	ref_buff.Initialize(NUM_TRAIN_SAMPLES,DIM);
 	//ref_buff.Initialize_For_Hashlearning();
-	Initialize_Ref_Data(NUM_TRAIN_SAMPLES);
-	Learn_Spherical_Hashing(src_sh,ref_buff,BCODE_LEN);
-
-
-
+	initialize_ref_data(NUM_TRAIN_SAMPLES);
+	learn_spherical_hashing(src_sh,ref_buff,BCODE_LEN);
 	ref_buff.srcfile.close();
-	ref_buff.srcfile.open(INPUT_REF_FILE_NAME,std::ifstream::in);
+
+	Stopwatch T2("");
+	T2.Reset();     T2.Start();
+	std::cout <<"- Start To Compute Reference Hashcode" << std::endl;
+//	Compute_Ref_Code(src_sh,read_buff_1,1);
+//	Compute_Ref_Code(src_sh,read_buff_2,2);
+	T2.Stop();
+	std::cout << "- Compute Reference Hashcode Finished(" << T2.GetTime() << " seconds)" << std::endl;
+	T1.Stop();
+	printf("- Index Time Finished (%f seconds)\n",T1.GetTime() );
+
+	read_buff_1.srcfile.seekg(0,read_buff_1.srcfile.beg);
+	read_buff_2.srcfile.seekg(0,read_buff_2.srcfile.beg);
 
 	Hash_Mapping_with_SA(src_sh,read_buff_1,PAIR_1);
 	Hash_Mapping_with_SA(src_sh,read_buff_2,PAIR_2);
