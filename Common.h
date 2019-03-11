@@ -13,7 +13,7 @@
 
 using namespace std;
 
-#define		PI				3.1415926536
+#define		PII				3.1415
 #define MIN(a,b,c)  (a<b?(a<c?a:c):(b<c?b:c))
 
 int Rand_NDigits(int nDigits);
@@ -42,7 +42,7 @@ RealT Rand_Gaussian()
 		x1 = Rand_Uniform<RealT>( 0.0 , 1.0 );
 	} while( x1 == 0 );
 	x2 = Rand_Uniform<RealT>( 0.0 , 1.0 );
-	ret = sqrt( -2.0 * log( x1 ) ) * cos( 2.0 * PI * x2 );
+	ret = sqrt( -2.0 * log( x1 ) ) * cos( 2.0 * PII * x2 );
 	return ret;
 }
 
@@ -80,35 +80,20 @@ int Compute_Edit_Distance(RealT *a, RealT *b,int dim)
     return d[dim];
 }
 
-// TODO
+
 template<typename RealT>
-RealT Compute_Distance_Hamming(RealT *v0, RealT *v1, int dim)
+RealT Compute_Distance_L2Sq(RealT *v0, RealT *v1, int dim, int start)
 {
 	RealT ret = 0.0;
 	for(int i=0;i<dim;i++)
 	{
-		if (v0[i] != v1[i])
-		{
-			ret++;
-		}
+		ret += ( v0[i] - v1[start + i] ) * ( v0[i] - v1[start + i] );
 	}
 	return ret;
 }
-
 
 template<typename RealT>
 RealT Compute_Distance_L2Sq(RealT *v0, RealT *v1, int dim)
-{
-	RealT ret = 0.0;
-	for(int i=0;i<dim;i++)
-	{
-		ret += ( v0[i] - v1[i] ) * ( v0[i] - v1[i] );
-	}
-	return ret;
-}
-
-template<typename RealT>
-RealT Compute_Distance_L2Sq(RealT *v0, bitset<BCODE_LEN> &v1, int dim)
 {
 	RealT ret = 0.0;
 	for(int i=0;i<dim;i++)

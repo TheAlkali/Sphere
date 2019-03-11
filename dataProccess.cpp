@@ -17,9 +17,9 @@ void count_ref_kmer(std::string);
 int main()
 {
 //	kmerUtils kmutil;
-	int klen = 50;
+	int klen = 76;
 //	LSH lsh;
-	int gate = 1;//std::atoi(argv[1]);
+	int gate = 0;//std::atoi(argv[1]);
 
 	char ref[] = "../reference/transcripts/Homo_sapiens.GRCh38.cdna.all.fa";
 	char read1[] = "dataset/srrdata/SRR5337025_1.fastq";//"dataset/rapmap_reads_1.fastq";
@@ -35,11 +35,11 @@ int main()
 	if (gate == 0){		
 		//extract the mapping results of each aread to disk
 		SAMparser  sp;
-		char test_sam[] = "../rapmap-res/map-res/mapped_reads.sam";
-		char test_res[] = "rapmap_mapped_res.txt";
+		char test_sam[] = "../rapmap_res/rapmap_mapped_reads.sam";
+		char test_res[] = "rapmap_res.txt";
 		sp.get_Sam(ref,test_sam,test_res,20000,klen);
 	}else if (gate == 1){		
-		store_reads(read1,read2,klen);
+		store_reads();
 //		store_reads("../reads/single-cell-data/SRR5337/Simulate_GRCh38.1.fa",klen);
 //		store_ref_kmers(ref,klen);
 	}else if (gate == 2){		

@@ -56,11 +56,12 @@ public :
 	Sphere *s;
 
 	int code_len;
+	int seg_len;
 
 	Index_Distance **ids;
 	bitset<NUM_TRAIN_SAMPLES> *table;
 
-	void Initialize(Points *_p,int code_len);
+	void Initialize(Points *_p,int code_len,int seg_len);
 	void Compute_Table();
 	void Compute_Num_Overlaps(int **overlaps);
 	void Set_Spheres();
@@ -70,14 +71,14 @@ public :
 	template<typename ArgType>
 	__inline void Compute_BCode(ArgType *x, bitset<BCODE_LEN> &y)
 	{
-	/*	std::ofstream file;
-		file.open("tmp/distanace.log",std::ofstream::app);*/
+
+		int start = KMER_SIZE;
 	#ifdef USE_PARALLELIZATION
 		#pragma omp parallel for
 	#endif
 		for(int i=0;i<BCODE_LEN;i++)
 		{
-			ArgType dis = Compute_Distance_L2Sq<REAL_TYPE>( s[i].c , x , ps->dim );
+			ArgType dis = Compute_Distance_L2Sq<REAL_TYPE>( s[i].c , x , ps->dim , start);
 			if( dis > s[i].rSq )
 			{
 				y[i] = 0;
@@ -86,6 +87,7 @@ public :
 			{
 				y[i] = 1;
 			}
+			start += seg_len;
 		//	file << dis << "\t";
 		}
 	/*	file << std::endl;

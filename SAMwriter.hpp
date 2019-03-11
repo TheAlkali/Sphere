@@ -187,6 +187,14 @@ public:
 			}
 			getline(read_seq_file_1,sf_1.seq);
 			getline(read_seq_file_2,sf_2.seq);
+			for (int i = 0; i < DIM; ++i)
+			{
+				sf_1.seq[i] = (char)itos_table[sf_1.seq[i]];
+			}
+			for (int i = 0; i < DIM; ++i)
+			{
+				sf_2.seq[i] = (char)itos_table[sf_2.seq[i]];
+			}
 			for (int i = 0; i < rip_vec.size(); ++i)
 			{	
 				sf_1.rname = std::move(rip_vec[i].rname);

@@ -114,15 +114,16 @@ public:
 			}
 		}	
 
-		
-		//print the ref seq that this read_idx mapped to
-		out_res << "+";
-		int rind = get_refseq(ref_name);
-		for (int i = 0; i < dim; ++i){
-			out_res << reflist->seq[rind][ref_loc + i];
+		if (ref_name != "*")
+		{
+			//print the ref seq that this read_idx mapped to
+			out_res << "+";
+			int rind = get_refseq(ref_name);
+			for (int i = 0; i < dim; ++i){
+				out_res << reflist->seq[rind][ref_loc + i];
+			}
+			out_res << std::endl;
 		}
-		out_res << std::endl;
-
 		return read_name;
 
 	/*	//add info to read_mapped_ref

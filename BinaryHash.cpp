@@ -18,11 +18,12 @@ void Sphere::Set_Radius(Points *ps, Index_Distance *ids)
 	rSq = r * r;
 }
 
-void SphericalHashing::Initialize(Points *_ps,int _code_len)
+void SphericalHashing::Initialize(Points *_ps,int _code_len,int _seg_len)
 {
 	ps = _ps;
 	code_len = _code_len;
-	
+	seg_len = _seg_len;
+
 	tps.Initialize( NUM_TRAIN_SAMPLES , ps->dim );	
 	bool *checkList = new bool [ ps->nP ];
 	SetVector_Val<bool>( checkList , ps->nP , true );

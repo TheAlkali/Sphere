@@ -4,10 +4,10 @@
 
 
 // target number of nearest neighbors
-#define KNN						20
+#define KNN						5
 
 // binary code length
-#define BCODE_LEN				16		
+#define BCODE_LEN				20		
 
 // number of training samples for spherical hashing
 #define NUM_TRAIN_SAMPLES		1000
@@ -24,6 +24,10 @@
 #define MAX_NUM_ITERATIONS		50
 
 #define INPUT_REF_FILE_NAME		"dataset/training_data.txt"	//
+//#define TRAINING_DATA_I			"dataset/training_i.csv"
+//#define TRAINING_DATA_J			"dataset/training_j.csv"
+#define SIMILARITY_OSP			"dataset/similarity_osp.csv"
+
 #define TRANSCRIPTS_FILE_NAME	"../reference/transcripts/Homo_sapiens.GRCh38.cdna.all.fa"//"dataset/rapmap_transcripts.fasta"
 #define TRANSCRIPTS_STRING_FILE "dataset/srrdata/true_ref_seq.txt"//"dataset/all_ref_seq.txt"
 
@@ -48,11 +52,11 @@
 #define PAIR_1_RES_FILE			"res/res_1.txt"
 #define PAIR_2_RES_FILE			"res/res_2.txt"
 #define PAIR_1_NAME_FILE		"dataset/tmp_name_1.bin"
-//#define OUTPUT_REF_HASH_FILE_NAME	"bin/ref_code_tmp.txt"
-//#define OUTPUT_READ_HASH_FILE_NAME  "bin/read_code_tmp.txt"
+#define PAIR_1_REF_HASH_FILE	"bin/ref_code_1.bin"
+#define PAIR_2_REF_HASH_FILE  	"bin/ref_code_2.bin"
 
-#define REF_BUFFER_SIZE			200000	//
-#define READ_BUFFER_SIZE		1000
+#define CODE_BUFFER_SIZE			200000	//
+//#define READ_BUFFER_SIZE		1000
 #define KMER_SIZE				10	
 #define TOLERANCE				7
 

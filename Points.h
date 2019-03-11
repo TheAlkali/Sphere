@@ -1,9 +1,10 @@
 #pragma once
-
-#include "Common.h"
-#include "Utils.hpp"
 #include <iostream>
 #include <fstream>
+
+//#include "Common.h"
+#include "Utils.hpp"
+#include "MemoryMapped.h"
 
 class Points
 {
@@ -12,7 +13,23 @@ public :
 	int dim;
 	REAL_TYPE **d;
 	std::ifstream srcfile;
-	
+
+
+	void Initialize_MemoryMapped(std::string filename)
+	{
+		MemoryMapped reads_file(filename);
+		for (int i = 0; i < nP; ++i)
+		{
+			for (int j = 0; j < dim; ++j)
+			{
+				d[i][j] = ictoi_table[reads_file.at(i * (dim + 1) + j)];
+			//	std::cout << d[i][j];
+			}
+		//	std::cout << std::endl;
+		}
+		reads_file.close();
+	}
+
 	void Initialize(int _nP, int _dim)
 	{
 		nP = _nP;
@@ -34,7 +51,6 @@ public :
 	{
 		std::string tmp;
 		int i;
-		int part = dim / BCODE_LEN;
 		for(i=0;i<nP && srcfile.peek() != EOF;i++)
 		{
 			std::getline(srcfile,tmp);
@@ -101,10 +117,10 @@ public :
 
 	void ReleaseMem()
 	{
-	/*	for(int i=0;i<nP;i++)
+		for(int i=0;i<nP;i++)
 		{
 			delete [] d[i];
-		}*/
+		}
 
 		delete [] d;
 	}

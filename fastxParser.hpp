@@ -155,7 +155,7 @@ void get_one_kmer(READ seq,int loc, bool if_out){
 	kmer_count__++;																																																																																																																																																																																																																																																										
 }
 
-std::string merge_ref_seq(std::string filename){
+std::string merge_ref_seq(std::string filename,int seg_len){
 	open_seqfile(filename);
 	filetype__ filetype = get_file_type(seqfile__);
 
@@ -169,37 +169,57 @@ std::string merge_ref_seq(std::string filename){
 
 	std::ofstream train_data(INPUT_REF_FILE_NAME);
 	int train_num = 0;
+	int start = KMER_SIZE;
+	int cond = BCODE_LEN * seg_len + KMER_SIZE;
 
 	auto t1 = std::chrono::high_resolution_clock::now();
 	for (size  = 0;seqfile__.peek() != EOF;size++){
 		seq.clear();
 		read_fa_oneseq(seqfile__,name,seq);
 		// generate training data
-		if(seq.length() > DIM && train_num < 1000)
+		if(seq.length() > 2 * DIM)
 		{
-			train_num++;
-			int rand_loc = rand() % (seq.length() - DIM + 1);
-			std::string train_read = seq.substr(rand_loc,DIM);
-			for (int i = 0; i < DIM; ++i)
+			if (train_num < NUM_TRAIN_SAMPLES)
 			{
-				char tmp = (char)stoic_table[(int8_t)train_read[i]];
-				train_data << tmp;
+				train_num++;
+				int rand_loc = rand() % (seq.length() - DIM + 1);
+				std::string train_read = seq.substr(rand_loc,DIM);
+				
+				while(true)
+				{
+					if (start < cond)
+					{
+						for (int j = 0; j < seg_len; ++j)
+						{
+							train_data << stoic_table[(int8_t)train_read[start + j]];
+						//	std::cout << d[k][j];
+						}
+						train_data << std::endl;
+						//std::cout << std::endl;
+						start += seg_len;
+					}else
+					{
+						start = KMER_SIZE;
+						break;
+					}		
+				}
 			}
-			train_data << std::endl;
+
+			rpos.rname.push_back(name);
+			rpos.ref_start.push_back(len);
+			len += seq.size() + 1;
+			for (int i = 0; i < seq.size(); ++i)
+			{
+				all_seq.push_back((char)stoic_table[(int8_t)seq[i]]);
+			}
+			all_seq.append("9");
 		}
-		rpos.rname.push_back(name);
-		rpos.ref_start.push_back(len);
-		len += seq.size() + 1;
-		for (int i = 0; i < seq.size(); ++i)
-		{
-			all_seq.push_back((char)stoic_table[(int8_t)seq[i]]);
-		}
-		all_seq.append("9");
+		
 	}
 	auto t2 = std::chrono::high_resolution_clock::now();
 	double fastxparser_time = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1).count();
 	std::cout << "- Total Transcriptomes:" << size << std::endl;
-	std::cout << "- Time Of Merging Ref Fasta and Generating Training Data (" << fastxparser_time << " seconds)" << std::endl;
+	std::cout << "- Time Of Merging Ref Fasta (" << fastxparser_time << " seconds)" << std::endl;
 
 	// save merge seq to disk
 /*	{
@@ -292,7 +312,7 @@ void store_reads_name(std::string filename1){
 }
 
 //directly store the reads to the files
-void store_reads(){
+size_t store_reads(){
 	open_seqfile(RAW_READ_FILE_1,RAW_READ_FILE_2);
 
 	klen__ = DIM;
@@ -300,10 +320,10 @@ void store_reads(){
 	out_read_file_1__.open(INPUT_READ_FILE_NAME_1,std::ofstream::out);
 	out_read_file_2__.open(INPUT_READ_FILE_NAME_2,std::ofstream::out);
 	if (!out_read_file_1__.is_open()){
-		std::cerr << "can't open out_read_file: srr25_1.txt" << std::endl;
+		std::cerr << "can't open out_read_file:" << INPUT_READ_FILE_NAME_1 << std::endl;
 	}
 	if (!out_read_file_2__.is_open()){
-		std::cerr << "can't open out_read_file: srr25_2.txt" << std::endl;
+		std::cerr << "can't open out_read_file:" << INPUT_READ_FILE_NAME_2 << std::endl;
 	}
 
 	size_t size  = 0;
@@ -346,7 +366,7 @@ void store_reads(){
 			out_read_file_2__ << std::endl;
 		}
 	}
-	std::cout << "- total reads:" << size * 2 << std::endl;
+	std::cout << "- total reads:" << size << std::endl;
 	seqfile__.close();
 	seqfile2__.close();
 	out_read_file_1__.close();
@@ -358,6 +378,7 @@ void store_reads(){
 		cereal::BinaryOutputArchive ar(reads_name_1);
 		ar(name_vec_1);
 	}
+	return size;
 }
 
 //directly store the reads to the files

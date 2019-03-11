@@ -1,7 +1,8 @@
 #include "BinaryHash.h"
-#include "Evaluation.h"
+//#include "Evaluation.h"
 #include "Mapping.hpp"
 #include "fastxParser.hpp"
+//#include "fastHashing.hpp"
 
 #ifdef USE_PARALLELIZATION
 #include <omp.h>
@@ -12,48 +13,57 @@
 
 // ref_buff: data points set
 // read_buff_1: query points set
-Points ref_buff, read_buff_1,read_buff_2;
+Points ref_buff;
 
 //Points train_bcode_P;
 
 SphericalHashing src_sh;
-
+/*
 int initialize_ref_data(size_t buff_size)
 {
 #ifdef INPUT_REF_FILE_NAME
-	ref_buff.Initialize(buff_size,DIM);
-	int file_end = ref_buff.Initialize_From_File();
+	ref_buff.Initialize(NUM_TRAIN_SAMPLES * BCODE_LEN,DIM);
+	ref_buff.Initialize_From_File_Training();
 #endif			
 	//if file end, return the count of unvisited data
 	//if file not end, return -1
-	return file_end;
-}
+}*/
 
-void learn_spherical_hashing(SphericalHashing &sh,Points &buff,int code_len)
+void learn_spherical_hashing(SphericalHashing &sh,Points &buff,int code_len,int seg_len)
 {
 	Stopwatch T0("");
-	sh.Initialize(&buff,code_len);
+	sh.Initialize(&buff,code_len,seg_len);
 	T0.Reset();		T0.Start();
 	sh.Set_Spheres();
+	for(int i=0;i<BCODE_LEN;i++)
+	{
+		for (int j = 0; j < seg_len; ++j)
+		{
+			std::cout << sh.s[i].c[j] << "\t";
+		}
+		std::cout << std::endl;
+		std::cout << sh.s[i].rSq << std::endl;
+	}
 	T0.Stop();
 	printf("- Learning Spherical Hashing Finished (%f seconds)\n",T0.GetTime());
 //	sh.Save_Sphere_Info();
 }
 
 // TODO pair end read result output
-void output_result(std::string readfile,std::string locfile,std::string disfile,std::string resfile)
+void output_result(std::string readfile,std::string locfile,std::string disfile,std::string resfile,std::string ref_string,std::string code_file)
 {
 
 	std::ofstream output(resfile);
 	std::ifstream read(readfile);
 	std::ifstream tmp_loc(locfile);
 	std::ifstream tmp_dis(disfile);
+	std::ifstream tmp_code(code_file);
 //	std::ifstream refcode_file;
 
-	int dim = read_buff_1.dim;
+	int dim = DIM;
 	size_t ref_loc = 0;
 //	unsigned long ref_code;
-	std::string tmp_ref,tmp_read; 
+	std::string tmp_read; 
 	// load mapping result from disk using cereal
 	mapped_res mres;
 	{
@@ -62,6 +72,12 @@ void output_result(std::string readfile,std::string locfile,std::string disfile,
 		ar_loc(CEREAL_NVP(mres.mapped_ref_loc));
 		ar_dis(CEREAL_NVP(mres.min_dis));
 	};
+
+	std::vector<bitset<BCODE_LEN>> read_code;
+	{
+		cereal::BinaryInputArchive ar_code(tmp_code);
+		ar_code(CEREAL_NVP(read_code));
+	}
 
 	Stopwatch T0("");
 	T0.Reset();		T0.Start();
@@ -73,11 +89,11 @@ void output_result(std::string readfile,std::string locfile,std::string disfile,
 		getline(read,tmp_read);
 	//	if (mres.min_dis[qIndex] <= 20)
 		{	
-			output << '>' << qIndex + 1  << ":" << mres.min_dis[qIndex] << ":" << std::endl;
-		//	output << bCodeRead_SH[qIndex] << std::endl;
+			output << '>' << qIndex + 1  << ":" << mres.min_dis[qIndex] << ":";
+			output << read_code[qIndex] << std::endl;
 			output << "= " ;//<< tmp_read << std::endl;
 
-			for (unsigned int i = 0; i < tmp_read.length(); ++i)
+			for (unsigned int i = 0; i < DIM; ++i)
 			{
 				output << (char)itos_table[(int8_t)tmp_read[i]];
 			//	std::cout << (char)itos_table[(int8_t)tmp_read[i]];
@@ -120,64 +136,50 @@ int main()
 
     Stopwatch T1("");
     T1.Reset();     T1.Start();
-    store_reads();
+    int seg_len = (DIM - KMER_SIZE) / BCODE_LEN;
 
-//	Suffix_Array();
-    Load_SA();
-	srand( (unsigned int)( time(NULL) ) );
+    int read_size = store_reads();
 
+	Mapping map(read_size,DIM);
+	map.Suffix_Array(seg_len);
+//    map.Load_SA(seg_len);
+ //   map.Generate_Trainging_Data();
+    
 	ref_buff.srcfile.open(INPUT_REF_FILE_NAME,std::ifstream::in);
-	read_buff_1.srcfile.open(INPUT_READ_FILE_NAME_1,std::ifstream::in);
-	read_buff_2.srcfile.open(INPUT_READ_FILE_NAME_2,std::ifstream::in);
-	
 	if (!ref_buff.srcfile.is_open())
 	{
 		perror(INPUT_REF_FILE_NAME);
 		exit(EXIT_FAILURE);
 	}
-	if (!read_buff_1.srcfile.is_open())
-	{
-		perror(INPUT_READ_FILE_NAME_1);
-		exit(EXIT_FAILURE);
-	}
-	if (!read_buff_2.srcfile.is_open())
-	{
-		perror(INPUT_READ_FILE_NAME_2);
-		exit(EXIT_FAILURE);
-	}
-
-	ref_buff.Initialize(NUM_TRAIN_SAMPLES,DIM);
-	//ref_buff.Initialize_For_Hashlearning();
-	initialize_ref_data(NUM_TRAIN_SAMPLES);
-	learn_spherical_hashing(src_sh,ref_buff,BCODE_LEN);
+	ref_buff.Initialize(NUM_TRAIN_SAMPLES * BCODE_LEN,seg_len);
+	ref_buff.Initialize_MemoryMapped(INPUT_REF_FILE_NAME);
+	learn_spherical_hashing(src_sh,ref_buff,BCODE_LEN, seg_len);
 	ref_buff.srcfile.close();
 
 	Stopwatch T2("");
 	T2.Reset();     T2.Start();
 	std::cout <<"- Start To Compute Reference Hashcode" << std::endl;
-//	Compute_Ref_Code(src_sh,read_buff_1,1);
-//	Compute_Ref_Code(src_sh,read_buff_2,2);
+	map.Compute_Ref_Code(src_sh,PAIR_1);
+	map.Compute_Ref_Code(src_sh,PAIR_2);
 	T2.Stop();
 	std::cout << "- Compute Reference Hashcode Finished(" << T2.GetTime() << " seconds)" << std::endl;
 	T1.Stop();
-	printf("- Index Time Finished (%f seconds)\n",T1.GetTime() );
+	printf("- Index Time Finished (%f seconds)\n\n\n\n",T1.GetTime() );
 
-	read_buff_1.srcfile.seekg(0,read_buff_1.srcfile.beg);
-	read_buff_2.srcfile.seekg(0,read_buff_2.srcfile.beg);
 
-	Hash_Mapping_with_SA(src_sh,read_buff_1,PAIR_1);
-	Hash_Mapping_with_SA(src_sh,read_buff_2,PAIR_2);
+	map.Hash_Mapping_with_SA(src_sh,PAIR_1);
+	map.Hash_Mapping_with_SA(src_sh,PAIR_2);
 	T0.Stop();
 	printf("- Total Running Time (%f seconds)\n",T0.GetTime() );
 
 	T0.Reset();     T0.Start();
  	SAMwriter sp;  
-    sp.gen_SAM_file();
+//    sp.gen_SAM_file();
     printf("- Generate SAM File Finished (%f seconds)\n",T0.GetTime());
     T0.Stop();
 	
-	output_result(INPUT_READ_FILE_NAME_1,PAIR_1_LOC_FILE,PAIR_1_DIS_FILE,PAIR_1_RES_FILE);
-	output_result(INPUT_READ_FILE_NAME_2,PAIR_2_LOC_FILE,PAIR_2_DIS_FILE,PAIR_2_RES_FILE);
+	output_result(INPUT_READ_FILE_NAME_1,PAIR_1_LOC_FILE,PAIR_1_DIS_FILE,PAIR_1_RES_FILE,map.ref_string,"tmp/read_code_1.bin");
+	output_result(INPUT_READ_FILE_NAME_2,PAIR_2_LOC_FILE,PAIR_2_DIS_FILE,PAIR_2_RES_FILE,map.ref_string,"tmp/read_code_2.bin");
 		
 	return 0;
 }
