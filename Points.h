@@ -13,17 +13,24 @@ public :
 	int dim;
 	REAL_TYPE **d;
 	std::ifstream srcfile;
-
-
-	void Initialize_MemoryMapped(std::string filename)
+	enum point_type
 	{
+		training,
+		region,
+		mapping
+	};
+
+
+	void Initialize_MemoryMapped(std::string filename,point_type type)
+	{
+		
 		MemoryMapped reads_file(filename);
 		for (int i = 0; i < nP; ++i)
 		{
 			for (int j = 0; j < dim; ++j)
 			{
+			//	std::cout << i * (dim + 1) + j << std::endl;
 				d[i][j] = ictoi_table[reads_file.at(i * (dim + 1) + j)];
-			//	std::cout << d[i][j];
 			}
 		//	std::cout << std::endl;
 		}

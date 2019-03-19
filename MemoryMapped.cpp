@@ -7,6 +7,7 @@
 #include "MemoryMapped.h"
 
 #include <stdexcept>
+#include <iostream>
 #include <cstdio>
 
 // OS-specific
@@ -196,6 +197,7 @@ unsigned char MemoryMapped::at(size_t offset) const
     throw std::invalid_argument("No view mapped");
   if (offset >= _mappedBytes)
   {
+    std::cout << "mappedBytes:" << _mappedBytes << std::endl;
     throw std::out_of_range("View is not large enough");
   }
 

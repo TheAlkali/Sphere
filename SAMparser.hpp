@@ -17,6 +17,13 @@ public:
 	int read_index;
 	int dim;
 	int nP;
+	std::string seq_1;
+	std::string seq_2;
+	std::vector<int> loc_1;
+	std::vector<int> loc_2;
+	std::vector<int> ref_1;
+	std::vector<int> ref_2;
+	bool again;
 
 
 	SAMparser(){
@@ -24,6 +31,9 @@ public:
 		read_index = 0;
 		dim = 0;
 		nP = 0;
+		seq_1 = "";
+		seq_2 = "";
+		again = false;
 	}
 
 	void initialize(int _nP){
@@ -93,10 +103,54 @@ public:
 				break;
 			}
 		}
-
+		if (again && read_seq != "*")
+		{
+			seq_2 = read_seq;
+			again= false;
+		}
+		if (last_read_name == "")
+		{
+			last_read_name = read_name;
+			if (read_seq != "*")
+			{
+				seq_1 = read_seq;
+				again = true;
+			}
+		}
 		if (read_name != last_read_name){
-			out_res << ">" << read_name << std::endl;
-			if (sam_index < 12){
+			out_res << ">" << last_read_name << std::endl;
+			out_res << "=" << seq_1 << std::endl;
+			for (int i = 0; i < ref_1.size(); ++i)
+			{
+				out_res << "+";
+				for (int j = 0; j < dim; ++j){
+					out_res << reflist->seq[ref_1[i]][loc_1[i] + j];
+				}
+				out_res << std::endl;
+			}
+			ref_1.clear();
+			loc_1.clear();
+
+			out_res << ">" << last_read_name << std::endl;
+			out_res << "=" << seq_2 << std::endl;
+			for (int i = 0; i < ref_2.size(); ++i)
+			{
+				out_res << "+";
+				for (int j = 0; j < dim; ++j){
+					out_res << reflist->seq[ref_2[i]][loc_2[i] + j];
+				}
+				out_res << std::endl;
+			}
+			ref_2.clear();
+			loc_2.clear();
+
+			if (read_seq != "*")
+			{
+				seq_1 = read_seq;
+				again = true;
+			}
+
+		/*	if (sam_index < 12){
 				if (sam_index == 10 && read_seq != "*"){
 					out_res << "=" << read_seq << std::endl;		
 				}else{
@@ -111,18 +165,29 @@ public:
 						}
 					}
 				}
-			}
+			}*/
 		}	
 
 		if (ref_name != "*")
 		{
-			//print the ref seq that this read_idx mapped to
-			out_res << "+";
 			int rind = get_refseq(ref_name);
-			for (int i = 0; i < dim; ++i){
+			if (read_seq == seq_1)
+			{
+				ref_1.push_back(rind);
+				loc_1.push_back(ref_loc);
+			}else
+			{
+				ref_2.push_back(rind);
+				loc_2.push_back(ref_loc);
+			}
+
+			//print the ref seq that this read_idx mapped to
+			//out_res << "+";
+			
+		/*	for (int i = 0; i < dim; ++i){
 				out_res << reflist->seq[rind][ref_loc + i];
 			}
-			out_res << std::endl;
+			out_res << std::endl;*/
 		}
 		return read_name;
 
@@ -175,7 +240,7 @@ public:
 			std::cerr << "can't open sam file" << std::endl;
 		}
 
-		std::string last_read_name;
+		std::string last_read_name = "";
 		read_index = 0;
 		nP = _nP;
 		dim = _dim;

@@ -14,4 +14,5 @@ bowtie2test.cpp
 bowtie2test
 rapmaptest.cpp
 rapmaptest
+TEST_RES/*
 

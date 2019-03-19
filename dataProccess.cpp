@@ -17,7 +17,7 @@ void count_ref_kmer(std::string);
 int main()
 {
 //	kmerUtils kmutil;
-	int klen = 76;
+	int klen = 50;
 //	LSH lsh;
 	int gate = 0;//std::atoi(argv[1]);
 
@@ -35,8 +35,8 @@ int main()
 	if (gate == 0){		
 		//extract the mapping results of each aread to disk
 		SAMparser  sp;
-		char test_sam[] = "../rapmap_res/rapmap_mapped_reads.sam";
-		char test_res[] = "rapmap_res.txt";
+		char test_sam[] = "../bowtie2_res/bowtie2_res.sam";
+		char test_res[] = "bowtie2_res.txt";
 		sp.get_Sam(ref,test_sam,test_res,20000,klen);
 	}else if (gate == 1){		
 		store_reads();
@@ -47,7 +47,7 @@ int main()
 		gen_simulate_reads(read2,ref,reflist,klen);
 	}else if (gate == 3){
 		//merge all refs to one
-		merge_ref_seq(ref);
+		merge_ref_seq(ref,1);
 	}else if (gate == 4){
 	/*	fparser.read_fastx(read1,read2,preadlist);
 		kmutil.set_kmer_length(klen);

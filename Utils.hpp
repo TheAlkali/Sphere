@@ -31,7 +31,7 @@ static constexpr int rc_table[128] = {
 
 //change base to int  ATCG to 1234 character
 // A=2=50 T=4=52 C=6=54 G=8=56 
-static constexpr int8_t stoic_table[128] = {
+static constexpr char stoic_table[128] = {
         0, 0,  0, 0,  0,  0,  0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 
         0, 0,  0, 0,  0,  0,  0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 
         0, 0,  0, 0,  0,  0,  0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 
@@ -71,6 +71,10 @@ static constexpr int8_t ictoi_table[80] = {
         0, 0,  2, 0,  4,  0,  6, 0,  8, 0, 0, 0,  0, 0, 0, 0 
 };
 
+static constexpr char itoic_table[80] = {
+        48, 0,  50, 0,  52,  0,  54, 0,  56, 57
+};
+
 class SArray
 {
 public:
@@ -96,39 +100,36 @@ public:
 
 struct region_info
 {
-    size_t region_size = 0;
     size_t region_start_idx;
     size_t region_end_idx;
     size_t region_loc_in_file;
-    size_t region_loc_in_rpro;
-    int region_visited;
 
     template<class Archive>
     void serialize(Archive &ar)
     {
-        ar(region_start_idx,region_size,region_loc_in_file);
+        ar(region_start_idx,region_end_idx,region_loc_in_file);
     }
 };
+
 
 struct region_profile
 {
     std::vector<uint64_t> rkmer_idx;
     std::vector<size_t> region_start_idx;
     std::vector<size_t> region_end_idx;
-    std::vector<int> region_visited;
     std::vector<size_t> region_loc_in_file;
 
     template<class Archive>
     void serialize(Archive &ar)
     {
-        ar(rkmer_idx,region_start_idx,region_end_idx,region_visited);
+        ar(rkmer_idx,region_start_idx,region_end_idx,region_loc_in_file);
     }
 };
 
 struct mapped_res
 {
     std::vector<std::vector<size_t>> mapped_ref_loc;
-    std::vector<double> min_dis;
+    std::vector<int> min_dis;
 
     template<class Archive>
     void serialize(Archive &ar)
