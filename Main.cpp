@@ -129,11 +129,11 @@ int main(int argc, char const *argv[])
 
 		Stopwatch T2("");
 		T2.Reset();     T2.Start();
-		std::cout <<"- Analysis of read region ..." << std::endl;
+	/*	std::cout <<"- Analysis of read region ..." << std::endl;
 		map.Get_Read_Region(PAIR_1);
 		map.Get_Read_Region(PAIR_2);
 		T2.Stop();
-		std::cout << "- Analysis Finished(" << T2.GetTime() << " seconds)" << std::endl;
+		std::cout << "- Analysis Finished(" << T2.GetTime() << " seconds)" << std::endl;*/
 		T1.Stop();
 		printf("- Index Time Finished (%f seconds)\n\n\n\n",T1.GetTime() );
 	}else if (gate == 1)
@@ -147,7 +147,7 @@ int main(int argc, char const *argv[])
 		map.Get_Read_Region(PAIR_2);
 		T2.Stop();
 		std::cout << "- Analysis Finished(" << T2.GetTime() << " seconds)" << std::endl;
-		
+
 		map.Hash_Mapping_with_SA(PAIR_2);
 		map.Hash_Mapping_with_SA(PAIR_1);
 		T0.Stop();

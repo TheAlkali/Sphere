@@ -351,19 +351,19 @@ size_t store_reads(){
 
 			name_vec_1.push_back(name_1);
 
-			std::string rc_second;
-			reverse_complete(second,rc_second);
+			std::string rc_first;
+			reverse_complete(first,rc_first);
 			for (int i = 0; i < klen__; ++i){
-				out_read_file_2__ << rc_second[i];
+				out_read_file_1__ << rc_first[i];
 			}
-			out_read_file_2__ << std::endl;
+			out_read_file_1__ << std::endl;
 		
 			// pair 2 reverse complete
 			
 			for (int i = 0; i < klen__; ++i){
-				out_read_file_1__ << stoic_table[(int8_t)first[i]];
+				out_read_file_2__ << stoic_table[(int8_t)second[i]];
 			}
-			out_read_file_1__ << std::endl;
+			out_read_file_2__ << std::endl;
 		}
 	}
 	std::cout << "- total reads:" << size << std::endl;

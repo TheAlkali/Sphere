@@ -7,7 +7,7 @@
 #define KNN						5
 
 // binary code length
-#define BCODE_LEN				16		
+#define BCODE_LEN				32		
 
 // number of training samples for spherical hashing
 #define NUM_TRAIN_SAMPLES		100
@@ -31,8 +31,8 @@
 #define TRANSCRIPTS_FILE_NAME	"../reference/transcripts/Homo_sapiens.GRCh38.cdna.all.fa"//"dataset/rapmap_transcripts.fasta"
 #define TRANSCRIPTS_STRING_FILE "dataset/srrdata/true_ref_seq.txt"//"dataset/all_ref_seq.txt"
 
-#define RAW_READ_FILE_1			"dataset/srrdata/sim_read_1.fastq"
-#define RAW_READ_FILE_2			"dataset/srrdata/sim_read_2.fastq"
+#define RAW_READ_FILE_1			"dataset/srrdata/small_SRR5337025_1.fastq"
+#define RAW_READ_FILE_2			"dataset/srrdata/small_SRR5337025_2.fastq"
 
 #define INPUT_READ_FILE_NAME_1	"dataset/srrdata/small_srr25_1.txt"//"dataset/sim_mis_read_5_1.txt"
 #define INPUT_READ_FILE_NAME_2	"dataset/srrdata/small_srr25_2.txt"//"dataset/sim_mis_read_5_2.txt"

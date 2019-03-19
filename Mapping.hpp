@@ -289,16 +289,29 @@ public:
         T1.Stop();
         printf("- Building SA Region Index Using BBhash Finished (%f seconds)\n",T1.GetTime());
 
-        std::ofstream region_file("sa/ref_suffix_region.txt");
+    //    std::ofstream region_file("sa/ref_suffix_region.txt");
         uint64_t idx;
+        uint64_t max_idx = 0;
         for (unsigned int i = 0; i < rpro.region_start_idx.size(); ++i)
         {
             idx = bphf->lookup(region_kmer[i]);
-            region_file << rpro.region_start_idx[i] << "\t" << rpro.region_end_idx[i] << "\t" << region_kmer[i] << "\t" << idx << std::endl;
+            if (idx > max_idx)
+            {
+                max_idx = idx;
+            }
+        //    region_file << rpro.region_start_idx[i] << "\t" << rpro.region_end_idx[i] << "\t" << region_kmer[i] << "\t" << idx << std::endl;
             rpro.rkmer_idx.push_back(idx);
         }
+        std::cout << "max idx:" << max_idx << std::endl;
+        std::vector<size_t> region_bphf_idx(max_idx + 1);
+        for (int i = 0; i < rpro.region_start_idx.size(); ++i)
+        {
+            idx = bphf->lookup(region_kmer[i]);
+            region_bphf_idx[idx] = i;
+        }
+
         rpro.region_loc_in_file.resize(rpro.region_start_idx.size());
-        region_file.close();
+    //    region_file.close();
 
         T0.Reset();     T0.Start();
         printf("- Starting To Compute Ref Hashcode ...\n");
@@ -317,6 +330,12 @@ public:
             std::ofstream seq_file("sa/ref_suffix_region_kmer.bin");
             cereal::BinaryOutputArchive ar(seq_file);
             ar(region_kmer);
+        }
+
+        {
+            std::ofstream region_bphf_idx_file("sa/region_bphf_idx.bin");
+            cereal::BinaryOutputArchive ar(region_bphf_idx_file);
+            ar(region_bphf_idx);
         }
         region_kmer.clear();
 
@@ -442,6 +461,13 @@ public:
             }
         }
 
+        std::vector<size_t> region_bphf_idx;
+        {
+            std::ifstream region_bphf_idx_file("sa/region_bphf_idx.bin");
+            cereal::BinaryInputArchive ar(region_bphf_idx_file);
+            ar(region_bphf_idx);
+        }
+
         Stopwatch T0("");
         T0.Reset();     T0.Start();
       
@@ -456,14 +482,15 @@ public:
             REAL_TYPE_to_String(kmer,read_buff.d[i]);
 
             rkmer_idx = bphf->lookup(kmer);
-            for (loc_in_rpro = 0; loc_in_rpro < rpro.rkmer_idx.size(); ++loc_in_rpro)
+            read_region[i] = region_bphf_idx[rkmer_idx];
+        /*    for (loc_in_rpro = 0; loc_in_rpro < rpro.rkmer_idx.size(); ++loc_in_rpro)
             {
                 if(rpro.rkmer_idx[loc_in_rpro] == rkmer_idx)
                 {
                     read_region[i] = loc_in_rpro;  
                     break;
                 }
-            }   
+            }*/   
         }
         // save read region info 
         {

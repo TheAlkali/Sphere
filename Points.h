@@ -30,7 +30,7 @@ public :
 			for (int j = 0; j < dim; ++j)
 			{
 			//	std::cout << i * (dim + 1) + j << std::endl;
-				d[i][j] = ictoi_table[reads_file.at(i * (dim + 1) + j)];
+				d[i][j] = ictoi_table[reads_file[i * (dim + 1) + j]];
 			}
 		//	std::cout << std::endl;
 		}
