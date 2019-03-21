@@ -20,7 +20,7 @@ void output_result(std::string readfile,std::string locfile,std::string disfile,
 	std::ifstream tmp_loc(locfile);
 	std::ifstream tmp_dis(disfile);
 	std::ifstream tmp_code(code_file);
-//	std::ifstream refcode_file;
+	std::ifstream refcode_file;
 
 	int dim = DIM;
 	size_t ref_loc = 0;
@@ -35,11 +35,11 @@ void output_result(std::string readfile,std::string locfile,std::string disfile,
 		ar_dis(CEREAL_NVP(mres.min_dis));
 	};
 
-/*	std::vector<bitset<BCODE_LEN>> read_code;
+	std::vector<bitset<BCODE_LEN>> read_code;
 	{
 		cereal::BinaryInputArchive ar_code(tmp_code);
 		ar_code(CEREAL_NVP(read_code));
-	}*/
+	}
 
 	Stopwatch T0("");
 	T0.Reset();		T0.Start();
@@ -51,8 +51,8 @@ void output_result(std::string readfile,std::string locfile,std::string disfile,
 		getline(read,tmp_read);
 	//	if (mres.min_dis[qIndex] <= 20)
 		{	
-			output << '>' << qIndex + 1  << ":" << mres.min_dis[qIndex] << ":" << std::endl;
-		//	output << read_code[qIndex] << std::endl;
+			output << '>' << qIndex + 1  << ":" << mres.min_dis[qIndex] << ":" ;//<< std::endl;
+			output << read_code[qIndex] << std::endl;
 			output << "= " ;//<< tmp_read << std::endl;
 
 			for (unsigned int i = 0; i < DIM; ++i)
@@ -93,7 +93,7 @@ void output_result(std::string readfile,std::string locfile,std::string disfile,
 int main(int argc, char const *argv[])
 //int main()
 {	
-	int gate = std::atoi(argv[1]);
+	int gate = 1;//std::atoi(argv[1]);
 //	system("rm tmp/*.log");
 	Stopwatch T0("");
     T0.Reset();     T0.Start();
@@ -101,43 +101,32 @@ int main(int argc, char const *argv[])
     Stopwatch T1("");
     T1.Reset();     T1.Start();
 
-
-
     int seg_len = (DIM - KMER_SIZE) / BCODE_LEN;
 
-    int read_size = store_reads();
-
-	Mapping map(read_size,DIM);
-
- //   map.Generate_Trainging_Data();
-    
-    Points ref_buff;
-	ref_buff.srcfile.open(INPUT_REF_FILE_NAME,std::ifstream::in);
-	if (!ref_buff.srcfile.is_open())
-	{
-		perror(INPUT_REF_FILE_NAME);
-		exit(EXIT_FAILURE);
-	}
-	ref_buff.Initialize(NUM_TRAIN_SAMPLES * BCODE_LEN,seg_len);
-	ref_buff.Initialize_MemoryMapped(INPUT_REF_FILE_NAME,Points::point_type::training);
-	map.Learn_Spherical_Hashing(ref_buff,BCODE_LEN, seg_len);
-	ref_buff.srcfile.close();
+	Mapping map(DIM);
 
 	if (gate == 0)
 	{
+	    Points ref_buff;
+		ref_buff.srcfile.open(INPUT_REF_FILE_NAME,std::ifstream::in);
+		if (!ref_buff.srcfile.is_open())
+		{
+			perror(INPUT_REF_FILE_NAME);
+			exit(EXIT_FAILURE);
+		}
+		ref_buff.Initialize(NUM_TRAIN_SAMPLES * BCODE_LEN,seg_len);
+		ref_buff.Initialize_MemoryMapped(INPUT_REF_FILE_NAME,Points::point_type::training);
+		map.Learn_Spherical_Hashing(ref_buff,BCODE_LEN, seg_len);
+		ref_buff.srcfile.close();
+
 		map.Suffix_Array(seg_len);
 
-		Stopwatch T2("");
-		T2.Reset();     T2.Start();
-	/*	std::cout <<"- Analysis of read region ..." << std::endl;
-		map.Get_Read_Region(PAIR_1);
-		map.Get_Read_Region(PAIR_2);
-		T2.Stop();
-		std::cout << "- Analysis Finished(" << T2.GetTime() << " seconds)" << std::endl;*/
 		T1.Stop();
 		printf("- Index Time Finished (%f seconds)\n\n\n\n",T1.GetTime() );
 	}else if (gate == 1)
 	{
+    	int read_size = store_reads();
+		map.Load_Spherical_Hashing(read_size,BCODE_LEN,seg_len);
 		map.Load_SA(seg_len);
 
 		Stopwatch T2("");
@@ -148,8 +137,8 @@ int main(int argc, char const *argv[])
 		T2.Stop();
 		std::cout << "- Analysis Finished(" << T2.GetTime() << " seconds)" << std::endl;
 
-		map.Hash_Mapping_with_SA(PAIR_2);
 		map.Hash_Mapping_with_SA(PAIR_1);
+		map.Hash_Mapping_with_SA(PAIR_2);
 		T0.Stop();
 		printf("- Total Running Time (%f seconds)\n",T0.GetTime() );
 

@@ -7,7 +7,7 @@
 #define KNN						5
 
 // binary code length
-#define BCODE_LEN				32		
+#define BCODE_LEN				16		
 
 // number of training samples for spherical hashing
 #define NUM_TRAIN_SAMPLES		100

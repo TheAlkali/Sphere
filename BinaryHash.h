@@ -3,6 +3,7 @@
 #include "Common.h"
 #include "Points.h"
 #include <fstream>
+#include <sstream>
 
 
 // hamming distance function
@@ -56,12 +57,12 @@ public :
 	Sphere *s;
 
 	int code_len;
-	int seg_len;
+	int dim;
 
 	Index_Distance **ids;
 	bitset<NUM_TRAIN_SAMPLES> *table;
 
-	void Initialize(Points *_p,int code_len,int seg_len);
+	void Initialize(Points *_p,int code_len,int dim);
 	void Compute_Table();
 	void Compute_Num_Overlaps(int **overlaps);
 	void Set_Spheres();
@@ -78,7 +79,7 @@ public :
 	#endif
 		for(int i=0;i<BCODE_LEN;i++)
 		{
-			ArgType dis = Compute_Distance_L2Sq<REAL_TYPE>( s[i].c , x , ps->dim , start);
+			ArgType dis = Compute_Distance_L2Sq<REAL_TYPE>( s[i].c , x , dim , start);
 			if( dis > s[i].rSq )
 			{
 				y[i] = 0;
@@ -87,7 +88,7 @@ public :
 			{
 				y[i] = 1;
 			}
-			start += seg_len;
+			start += dim;
 		//	file << dis << "\t";
 		}
 	/*	file << std::endl;
@@ -97,10 +98,40 @@ public :
 	void Save_Sphere_Info()
 	{
 		std::ofstream file;
-		file.open("tmp/sphere_info.log");
-		for (int i = 0; i < BCODE_LEN; ++i)
+		file.open("bin/sphere_info.log");
+		for (int i = 0; i < code_len; ++i)
 		{
-			file << *(s[i].c) << "\t" << s[i].rSq << std::endl;
+			for (int j = 0; j < dim; ++j)
+			{
+				file << s[i].c[j] << " " ;
+			}
+			file << s[i].rSq << std::endl;
+		}
+		file.close();
+	}
+
+	void Load_Sphere_Info(int _code_len,int _seg_len)
+	{
+		code_len = _code_len;
+		dim = _seg_len;
+
+		std::ifstream file;
+		file.open("bin/sphere_info.log");
+		std::string tmp;
+
+		s = new Sphere [ code_len ];
+		for (int i = 0; i < code_len; ++i)
+		{
+			s[i].Initialize( dim );
+
+			getline(file,tmp);
+			std::stringstream ss(tmp);
+			for (int j = 0; j < dim; ++j)
+			{
+				ss >> s[i].c[j];
+//				std::cout << s[i].c[j] << "\t";
+			}
+			ss >> s[i].rSq;
 		}
 		file.close();
 	}

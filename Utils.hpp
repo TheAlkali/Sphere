@@ -98,19 +98,17 @@ public:
     }
 };
 
-struct region_info
+struct induced_region_info
 {
-    size_t region_start_idx;
-    size_t region_end_idx;
-    size_t region_loc_in_file;
+    std::vector<unsigned long> induced_region_code;
+    std::vector<std::vector<size_t>> induced_code_bucket;
 
     template<class Archive>
     void serialize(Archive &ar)
     {
-        ar(region_start_idx,region_end_idx,region_loc_in_file);
+        ar(induced_region_code,induced_code_bucket);
     }
 };
-
 
 struct region_profile
 {
