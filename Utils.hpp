@@ -115,12 +115,11 @@ struct region_profile
     std::vector<uint64_t> rkmer_idx;
     std::vector<size_t> region_start_idx;
     std::vector<size_t> region_end_idx;
-    std::vector<size_t> region_loc_in_file;
 
     template<class Archive>
     void serialize(Archive &ar)
     {
-        ar(rkmer_idx,region_start_idx,region_end_idx,region_loc_in_file);
+        ar(rkmer_idx,region_start_idx,region_end_idx);
     }
 };
 

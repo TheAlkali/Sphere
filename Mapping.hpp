@@ -106,32 +106,27 @@ public:
         bitset<BCODE_LEN> bCodeRef;
         REAL_TYPE *seq = new REAL_TYPE[dim];
         for (int i = 0; i < rpro.region_start_idx.size(); ++i)
-        {
-            if (region_kmer[i].find_first_of("9") == std::string::npos)
+        {   
+            for (size_t j = rpro.region_start_idx[i]; j < rpro.region_end_idx[i]; ++j)
             {
-                
-                rpro.region_loc_in_file[i] = loc_in_file;
-                
-                for (size_t j = rpro.region_start_idx[i]; j < rpro.region_end_idx[i]; ++j)
+                //if buffer is full, store ref codes to disk
+                if (ref_buffer_count == buffer_size)
                 {
-                    //if buffer is full, store ref codes to disk
-                    if (ref_buffer_count == buffer_size)
-                    {
-                        bCodeRef_file.write(reinterpret_cast<const char*>(&bCodeRef_vec[0]),buffer_size * sizeof(unsigned long));
-                        ref_buffer_count = 0;
-                    }
-                    
-                    for (int k = 0; k < dim; ++k)
-                    {
-                        seq[k] = ictoi_table[ref_string[sarry.con[j] + k]];
-                    }
-                    src_sh.Compute_BCode(seq,bCodeRef);
-                    bCodeRef_vec[ref_buffer_count] = bCodeRef.to_ulong();         
-                    ref_buffer_count++;
-                   
+                    bCodeRef_file.write(reinterpret_cast<const char*>(&bCodeRef_vec[0]),buffer_size * sizeof(unsigned long));
+                    ref_buffer_count = 0;
                 }
-                loc_in_file += rpro.region_end_idx[i] - rpro.region_start_idx[i];
+                
+                for (int k = 0; k < dim; ++k)
+                {
+                    seq[k] = ictoi_table[ref_string[sarry.con[j] + k]];
+                }
+                src_sh.Compute_BCode(seq,bCodeRef);
+            //    std::cout << bCodeRef << std::endl;
+                bCodeRef_vec[ref_buffer_count] = bCodeRef.to_ulong();         
+                ref_buffer_count++;
+               
             }
+            loc_in_file += rpro.region_end_idx[i] - rpro.region_start_idx[i];
  
         }
         bCodeRef_file.close();    
@@ -142,6 +137,7 @@ public:
         std::ofstream irinfo_file("bin/induced_region_info.bin");
         std::ifstream bCodeRef_file(REF_HASH_FILE);
         std::vector<unsigned long> bCodeRef_vec;
+        std::vector<unsigned long> induced_region_code;
 
         std::vector<std::vector<unsigned long>> induced_bucket;
 
@@ -154,55 +150,59 @@ public:
         std::vector<induced_region_info> irinfo_vec;
         induced_region_info irinfo;
         std::vector<size_t> loc_tmp;
+        size_t region_start = 0;
 
-        for (int i = 0; i < rpro.region_start_idx.size(); ++i)
+        for (int i = 0; i < rpro.region_start_idx.size() - 1; ++i)
         {
-            if (rpro.region_loc_in_file[i])
+            region_size = rpro.region_end_idx[i] - rpro.region_start_idx[i];
+        //    std::cout <<rpro.region_end_idx[i] << "\t"<< rpro.region_start_idx[i]<< "\t"<< region_size << std::endl;
+            bCodeRef_vec.resize(region_size);
+            bCodeRef_file.clear();
+            bCodeRef_file.seekg(rpro.region_start_idx[i] * sizeof(unsigned long),bCodeRef_file.beg);
+            bCodeRef_file.read(reinterpret_cast<char*>(&bCodeRef_vec[0]),region_size * sizeof(unsigned long));
+
+            //find the max element in vec
+            max_element = *(std::max_element(std::begin(bCodeRef_vec), std::end(bCodeRef_vec)));
+            loc_in_bucket.clear();
+            loc_in_bucket.resize(max_element + 1,-1);
+
+            bucket_size = 0;
+            induced_region_code.clear();
+            rpro.region_start_idx[i] = region_start;
+        //    irinfo.induced_code_bucket.clear();
+            for (int j = 0; j < region_size; ++j)
             {
-                region_size = rpro.region_end_idx[i] - rpro.region_start_idx[i];
-                bCodeRef_vec.resize(region_size);
-                bCodeRef_file.clear();
-                bCodeRef_file.seekg(rpro.region_loc_in_file[i] * sizeof(unsigned long),bCodeRef_file.beg);
-                bCodeRef_file.read(reinterpret_cast<char*>(&bCodeRef_vec[0]),region_size * sizeof(unsigned long));
-
-                //find the max element in vec
-                max_element = *(std::max_element(std::begin(bCodeRef_vec), std::end(bCodeRef_vec)));
-                loc_in_bucket.clear();
-                loc_in_bucket.resize(max_element + 1,-1);
-
-                bucket_size = 0;
-                irinfo.induced_region_code.clear();
-                irinfo.induced_code_bucket.clear();
-                for (int j = 0; j < region_size; ++j)
+                if (loc_in_bucket[bCodeRef_vec[j]] < 0)
                 {
-                    if (loc_in_bucket[bCodeRef_vec[j]] < 0)
-                    {
-                        loc_in_bucket[bCodeRef_vec[j]] = bucket_size;
-                        irinfo.induced_region_code.push_back(bCodeRef_vec[j]);
-                        bucket_size++;
-                        irinfo.induced_code_bucket.resize(bucket_size);
-                    }
-                    irinfo.induced_code_bucket[loc_in_bucket[bCodeRef_vec[j]]].push_back(j);
+                    loc_in_bucket[bCodeRef_vec[j]] = bucket_size;
+                    induced_region_code.push_back(bCodeRef_vec[j]);
+                    bucket_size++;
+                //    irinfo.induced_code_bucket.resize(bucket_size);
                 }
-                irinfo_vec.push_back(irinfo);
-                if (irinfo_vec.size() == buffer_size)
-                {
-                    irinfo_file.write(reinterpret_cast<const char*>(&irinfo_vec[0]),buffer_size * sizeof(induced_region_info));
-                    irinfo_vec.clear();
-                }
-
-            /*    std::cout << "-----" << i << std::endl;
-                for (int k = 0; k < irinfo.induced_region_code.size(); ++k)
-                {
-                    std::cout << "++" << irinfo.induced_region_code[k] << std::endl;
-                    loc_tmp = irinfo.induced_code_bucket[k];
-                    for (int j = 0; j < loc_tmp.size(); ++j)
-                    {
-                        std::cout << "--" << bCodeRef_vec[loc_tmp[j]] << std::endl;
-                    }
-                    std::cout << std::endl;
-                }*/
+            //    irinfo.induced_code_bucket[loc_in_bucket[bCodeRef_vec[j]]].push_back(j);
             }
+            rpro.region_end_idx[i] = rpro.region_start_idx[i] + bucket_size;
+            region_start += bucket_size;
+
+            irinfo_file.write(reinterpret_cast<const char*>(&induced_region_code[0]),bucket_size * sizeof(unsigned long));
+        /*    irinfo_vec.push_back(irinfo);
+            if (irinfo_vec.size() == buffer_size)
+            {
+                irinfo_file.write(reinterpret_cast<const char*>(&irinfo_vec[0]),buffer_size * sizeof(induced_region_info));
+                irinfo_vec.clear();
+            }*/
+
+        /*    std::cout << "-----" << i << std::endl;
+            for (int k = 0; k < irinfo.induced_region_code.size(); ++k)
+            {
+                std::cout << "++" << irinfo.induced_region_code[k] << std::endl;
+                loc_tmp = irinfo.induced_code_bucket[k];
+                for (int j = 0; j < loc_tmp.size(); ++j)
+                {
+                    std::cout << "--" << bCodeRef_vec[loc_tmp[j]] << std::endl;
+                }
+                std::cout << std::endl;
+            }*/
         }
         irinfo_file.close();
     }
@@ -227,7 +227,7 @@ public:
         {
             std::ifstream region_file("sa/ref_suffix_region.bin");
             cereal::BinaryInputArchive ar(region_file);
-            ar(rpro.rkmer_idx,rpro.region_start_idx,rpro.region_end_idx,rpro.region_loc_in_file);
+            ar(rpro.rkmer_idx,rpro.region_start_idx,rpro.region_end_idx);
         }
 
         {
@@ -344,19 +344,21 @@ public:
             }*/
 
            kmer = ref_string.substr(sarry.con[i],KMER_SIZE);
-
-            if (last_kmer != kmer && !start)
-            {
-                rpro.region_start_idx.push_back(i);
-                region_kmer.push_back(kmer);
-                start = true;
-            }else if (last_kmer != kmer && start)
-            {
-                rpro.region_end_idx.push_back(i);
-                rpro.region_start_idx.push_back(i);
-                region_kmer.push_back(kmer);
-            }
-            last_kmer = kmer;
+           if (kmer.find_first_of("9") == std::string::npos)
+           {
+                if (last_kmer != kmer && !start)
+                {
+                    rpro.region_start_idx.push_back(i);
+                    region_kmer.push_back(kmer);
+                    start = true;
+                }else if (last_kmer != kmer && start)
+                {
+                    rpro.region_end_idx.push_back(i);
+                    rpro.region_start_idx.push_back(i);
+                    region_kmer.push_back(kmer);
+                }
+                last_kmer = kmer;
+           }
         }
     //    saidx_txt.close();
 
@@ -379,7 +381,7 @@ public:
         T1.Stop();
         printf("- Building SA Region Index Using BBhash Finished (%f seconds)\n",T1.GetTime());
 
-    //    std::ofstream region_file("sa/ref_suffix_region.txt");
+        std::ofstream region_file("sa/ref_suffix_region.txt");
         T0.Reset();     T0.Start();
         printf("- Starting To Search Region ...\n");
         uint64_t idx;
@@ -391,7 +393,7 @@ public:
             {
                 max_idx = idx;
             }
-        //    region_file << rpro.region_start_idx[i] << "\t" << rpro.region_end_idx[i] << "\t" << region_kmer[i] << "\t" << idx << std::endl;
+            region_file << rpro.region_start_idx[i] << "\t" << rpro.region_end_idx[i] << "\t" << region_kmer[i] << "\t" << idx << std::endl;
             rpro.rkmer_idx.push_back(idx);
         }
         std::vector<size_t> region_bphf_idx(max_idx + 1);
@@ -401,8 +403,7 @@ public:
             region_bphf_idx[idx] = i;
         }
 
-        rpro.region_loc_in_file.resize(rpro.region_start_idx.size(),-1);
-    //    region_file.close();
+        region_file.close();
         T0.Stop();
         printf("- Searching Regions Finished (%f seconds)\n",T0.GetTime());
 
@@ -412,18 +413,18 @@ public:
         T0.Stop();
         printf("- Computing Hashcode Of Ref Using SH (%f seconds)\n",T0.GetTime());*/
 
-        T0.Reset();     T0.Start();
+    /*    T0.Reset();     T0.Start();
         printf("- Starting To Merge Duplicated Hashcode In Regions ...\n");
         Merge_Duplicated_In_Region();
         T0.Stop();
-        printf("- Computing Hashcode Of Ref Using SH (%f seconds)\n",T0.GetTime());
+        printf("- Computing Hashcode Of Ref Using SH (%f seconds)\n",T0.GetTime());*/
 
 
         //save sa region profile to disk using cereal
         {
             std::ofstream region_file("sa/ref_suffix_region.bin");
             cereal::BinaryOutputArchive ar(region_file);
-            ar(rpro.rkmer_idx,rpro.region_start_idx,rpro.region_end_idx,rpro.region_loc_in_file);
+            ar(rpro.rkmer_idx,rpro.region_start_idx,rpro.region_end_idx);
         }
 
         {
@@ -582,14 +583,6 @@ public:
 
             rkmer_idx = sa_bphf->lookup(kmer);
             read_region[i] = region_bphf_idx[rkmer_idx];
-        /*    for (loc_in_rpro = 0; loc_in_rpro < rpro.rkmer_idx.size(); ++loc_in_rpro)
-            {
-                if(rpro.rkmer_idx[loc_in_rpro] == rkmer_idx)
-                {
-                    read_region[i] = loc_in_rpro;  
-                    break;
-                }
-            }*/   
         }
         // save read region info 
         {
@@ -606,7 +599,8 @@ public:
         std::ifstream read_region_file;
         std::vector<uint64_t> read_region;
 
-        
+        std::ifstream irinfo_file("bin/induced_region_info.bin");
+        std::vector<unsigned long> induced_region_code;
         Points read_buff;
 
         std::ofstream tmp_loc_file;
@@ -652,8 +646,10 @@ public:
         size_t loc_in_file = 0;
         int region_size = 0;
         int min_dis = 0;
+        int min_dis_idx = 0;
         int dist = 0;
-        size_t start = 0;
+
+    //    std:cout << "sarry size:" << sarry.con.size() << std::endl;
         std::vector<unsigned long> bCodeRef_vec;
         for (int i = 0; i < read_size; ++i)
         {
@@ -665,36 +661,56 @@ public:
             
             ref_loc.clear();
             region_size = rpro.region_end_idx[read_region[i]] - rpro.region_start_idx[read_region[i]];
-        //    std::cout <<rpro.region_end_idx[read_region[i]] << "\t"<< rpro.region_start_idx[read_region[i]]<< "\t"<< region_size << std::endl;
-            bCodeRef_vec.resize(region_size);
-            if(region_size > 0)
+            if(read_region[i] < rpro.region_start_idx.size() && region_size > 0)
             {
+            //    std::cout << rpro.region_start_idx[read_region[i]] << "\t" << rpro.region_end_idx[read_region[i]] << std::endl;
+            
+            /*    bCodeRef_vec.resize(region_size);
                 bCodeRef_file.clear();
-                bCodeRef_file.seekg(rpro.region_loc_in_file[read_region[i]] * sizeof(unsigned long),bCodeRef_file.beg);
-                bCodeRef_file.read(reinterpret_cast<char*>(&bCodeRef_vec[0]),region_size * sizeof(unsigned long));
+                bCodeRef_file.seekg(rpro.region_start_idx[read_region[i]] * sizeof(unsigned long),bCodeRef_file.beg);
+                bCodeRef_file.read(reinterpret_cast<char*>(&bCodeRef_vec[0]),region_size * sizeof(unsigned long));*/
 
-            //    start = rpro.region_loc_in_file[read_region[i]] * sizeof(unsigned long);
+                irinfo_file.clear();
+                irinfo_file.seekg(rpro.region_start_idx[read_region[i]] * sizeof(unsigned long), irinfo_file.beg);
+                induced_region_code.resize(region_size);
+                irinfo_file.read(reinterpret_cast<char*>(&induced_region_code[0]),region_size * sizeof(unsigned long));
+
                 ref_loc.clear();
                 min_dis = 1000;
-
                 for (unsigned int j = 0; j < region_size; ++j)
                 {    
-                    bCodeRef = bCodeRef_vec[j]; //bCodeRef_file[start + j * sizeof(unsigned long)];
+                //    bCodeRef = bCodeRef_vec[j]; 
+                    bCodeRef = induced_region_code[j];
                     dist = Compute_HD(bCodeRead, bCodeRef);
-                    if (min_dis > dist)
+                /*    if (min_dis > dist)
                     {
+                        min_dis_idx = j;
                         min_dis = std::move(dist);
-                        ref_loc.clear();    
+                        ref_loc.clear();
                         ref_loc.push_back(sarry.con[rpro.region_start_idx[read_region[i]] + j]);
                     }else if (min_dis == dist)
                     {
                         ref_loc.push_back(sarry.con[rpro.region_start_idx[read_region[i]] + j]);
+                    }*/
+                    
+                    if (min_dis > dist)
+                    {
+                        min_dis_idx = j;
+                        min_dis = dist;
                     }
                 } 
-                mres.mapped_ref_loc.push_back(ref_loc);
-                mres.min_dis.push_back(min_dis);
+            /*    std::cout << min_dis << std::endl;
+                std::cout << bCodeRead << std::endl;
+                bCodeRef = induced_region_code[min_dis_idx];
+                std::cout << bCodeRef << std::endl << std::endl;*/
+                ref_size += region_size;
+            }else
+            {
+                ref_loc.push_back(-1);
+                min_dis = 1000;
             }
-            ref_size += region_size;
+            mres.mapped_ref_loc.push_back(ref_loc);
+            mres.min_dis.push_back(min_dis);
 
         /*    read_buffer_size++;
             if (read_buffer_size == buffer_size)

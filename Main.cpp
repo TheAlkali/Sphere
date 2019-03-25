@@ -67,18 +67,21 @@ void output_result(std::string readfile,std::string locfile,std::string disfile,
 			for (unsigned int i = 0; i < mres.mapped_ref_loc[qIndex].size(); ++i)
 			{
 				ref_loc = mres.mapped_ref_loc[qIndex][i];
-				//------ seek with sa------
-				char base;
-				output << "+ ";	
-	//			std::cout << "+ ";	
-				for (int j = 0; j < dim; ++j)
+				if (ref_loc > 0)
 				{
-					base = ref_string[ref_loc + j];
-					output << (char)itos_table[(int8_t)base];
-	//				std::cout << (char)itos_table[(int8_t)base];
+					//------ seek with sa------
+					char base;
+					output << "+ ";	
+		//			std::cout << "+ ";	
+					for (int j = 0; j < dim; ++j)
+					{
+						base = ref_string[ref_loc + j];
+						output << (char)itos_table[(int8_t)base];
+		//				std::cout << (char)itos_table[(int8_t)base];
+					}
+		//			std::cout << std::endl;
+					output << " " << ref_loc << std::endl;
 				}
-	//			std::cout << std::endl;
-				output << " " << ref_loc << std::endl;
 			}
 		}
 		
