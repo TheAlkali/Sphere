@@ -98,40 +98,31 @@ public:
     }
 };
 
-struct induced_region_info
-{
-    std::vector<unsigned long> induced_region_code;
-    std::vector<std::vector<size_t>> induced_code_bucket;
-
-    template<class Archive>
-    void serialize(Archive &ar)
-    {
-        ar(induced_region_code,induced_code_bucket);
-    }
-};
-
 struct region_profile
 {
     std::vector<uint64_t> rkmer_idx;
     std::vector<size_t> region_start_idx;
     std::vector<size_t> region_end_idx;
 
+    //record the start idx of a bucket in file according to an unique code  after inducing the region size
+    std::vector<std::vector<size_t>> code_bucket_idx;
+
     template<class Archive>
     void serialize(Archive &ar)
     {
-        ar(rkmer_idx,region_start_idx,region_end_idx);
+        ar(rkmer_idx,region_start_idx,region_end_idx,code_bucket_idx);
     }
 };
 
 struct mapped_res
 {
-    std::vector<std::vector<size_t>> mapped_ref_loc;
+    std::vector<int> min_code_idx;
     std::vector<int> min_dis;
 
     template<class Archive>
     void serialize(Archive &ar)
     {
-        ar(mapped_ref_loc,min_dis);
+        ar(min_code_idx,min_dis);
     }
 };
 
