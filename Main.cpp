@@ -15,7 +15,7 @@
 int main(int argc, char const *argv[])
 //int main()
 {	
-	int gate = std::atoi(argv[1]);
+	int gate = 1;//std::atoi(argv[1]);
 //	system("rm tmp/*.log");
 	Stopwatch T0("");
     T0.Reset();     T0.Start();
@@ -70,8 +70,8 @@ int main(int argc, char const *argv[])
 	    printf("- Generate SAM File Finished (%f seconds)\n",T0.GetTime());
 	    T0.Stop();
 		
-		map.output_result(INPUT_READ_FILE_NAME_1,PAIR_1_LOC_FILE,PAIR_1_DIS_FILE,PAIR_1_RES_FILE,"tmp/read_code_1.bin",PAIR_1_REGION_FILE);
-		map.output_result(INPUT_READ_FILE_NAME_2,PAIR_2_LOC_FILE,PAIR_2_DIS_FILE,PAIR_2_RES_FILE,"tmp/read_code_2.bin",PAIR_2_REGION_FILE);
+		map.output_result(PAIR_1);
+		map.output_result(PAIR_2);
 	}
 		
 	return 0;

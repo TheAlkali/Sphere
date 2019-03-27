@@ -50,6 +50,9 @@ private:
 
     std::vector<std::string> region_kmer;
 
+    std::vector<bool> is_read_1_rev;
+    std::vector<bool> is_read_2_rev;
+
 public:
     SphericalHashing src_sh;
     region_profile rpro;
@@ -405,11 +408,11 @@ public:
         T0.Stop();
         printf("- Searching Regions Finished (%f seconds)\n",T0.GetTime());
 
-    /*    T0.Reset();     T0.Start();
+        T0.Reset();     T0.Start();
         printf("- Starting To Compute Ref Hashcode ...\n");
         Compute_All_Ref_Code();
         T0.Stop();
-        printf("- Computing Hashcode Of Ref Using SH (%f seconds)\n",T0.GetTime());*/
+        printf("- Computing Hashcode Of Ref Using SH (%f seconds)\n",T0.GetTime());
 
         T0.Reset();     T0.Start();
         printf("- Starting To Merge Duplicated Hashcode In Regions ...\n");
@@ -528,12 +531,12 @@ public:
             seq.push_back(itoic_table[(int)d[i]]);
         }
     }
-  
-    // TODO
+    
     void Get_Read_Region(int pair)
     {
         // save read region to disk
         std::ofstream read_region_file;
+        std::ofstream rc_read_region_file;
         Points read_buff;
 
         if (pair == PAIR_1)
@@ -543,6 +546,7 @@ public:
             read_buff.Initialize_MemoryMapped(INPUT_READ_FILE_NAME_1,Points::point_type::mapping);
 
             read_region_file.open(PAIR_1_REGION_FILE,std::ios::binary | std::ios::app);
+            rc_read_region_file.open(PAIR_1_RC_REGION_FILE,std::ios::binary | std::ios::app);
             if(!read_region_file.is_open())
             {
                 perror(PAIR_1_REGION_FILE);
@@ -554,6 +558,7 @@ public:
             read_buff.Initialize_MemoryMapped(INPUT_READ_FILE_NAME_2,Points::point_type::mapping);
 
             read_region_file.open(PAIR_2_REGION_FILE,std::ios::binary | std::ios::app);
+            rc_read_region_file.open(PAIR_2_RC_REGION_FILE,std::ios::binary | std::ios::app);
             if(!read_region_file.is_open())
             {
                 perror(PAIR_2_REGION_FILE);
@@ -570,8 +575,10 @@ public:
         Stopwatch T0("");
         T0.Reset();     T0.Start();
       
-        std::vector<uint64_t> read_region(read_size);       
+        std::vector<uint64_t> read_region_forward(read_size);  
+        std::vector<uint64_t> rc_read_region(read_size);     
         std::string kmer;
+        std::string rc_kmer;
         uint64_t rkmer_idx;
         uint64_t loc_in_rpro = 0;
         std::fstream region_file;
@@ -580,31 +587,108 @@ public:
             REAL_TYPE_to_String(kmer,read_buff.d[i]);
 
             rkmer_idx = sa_bphf->lookup(kmer);
-            read_region[i] = region_bphf_idx[rkmer_idx];
+            read_region_forward[i] = region_bphf_idx[rkmer_idx];
+
+            reverse_complete(kmer,rc_kmer,true);
+            rkmer_idx = sa_bphf->lookup(rc_kmer);
+            rc_read_region[i] = region_bphf_idx[rkmer_idx];
         }
         // save read region info 
         {
             cereal::BinaryOutputArchive ar(read_region_file);
-            ar(read_region);
+            ar(read_region_forward);
         }
 
-        read_region.clear();
+        {
+            cereal::BinaryOutputArchive ar_rc(rc_read_region_file);
+            ar_rc(rc_read_region);
+        }
+        
         read_region_file.close();
+        rc_read_region_file.close();
+    }
+
+    std::pair<int,int> Mapping_Process(size_t read_region,std::ifstream &irinfo_file,bitset<BCODE_LEN> bCodeRead)
+    {
+
+        std::vector<unsigned long> reduced_region_code;
+
+        
+        bitset<BCODE_LEN> bCodeRef;
+
+        size_t loc_in_file = 0;
+        int region_size = 0;
+        int min_dis = 0;
+        int min_dis_idx = 0;
+        int dist = 0;
+
+        region_size = rpro.region_end_idx[read_region] - rpro.region_start_idx[read_region];
+        if(read_region < rpro.region_start_idx.size() && region_size > 0)
+        {
+        //    std::cout << rpro.region_start_idx[read_region[i]] << "\t" << rpro.region_end_idx[read_region[i]] << std::endl;
+        
+        /*    bCodeRef_vec.resize(region_size);
+            bCodeRef_file.clear();
+            bCodeRef_file.seekg(rpro.region_start_idx[read_region[i]] * sizeof(unsigned long),bCodeRef_file.beg);
+            bCodeRef_file.read(reinterpret_cast<char*>(&bCodeRef_vec[0]),region_size * sizeof(unsigned long));*/
+
+            irinfo_file.clear();
+            irinfo_file.seekg(rpro.region_start_idx[read_region] * sizeof(unsigned long), irinfo_file.beg);
+            reduced_region_code.resize(region_size);
+            irinfo_file.read(reinterpret_cast<char*>(&reduced_region_code[0]),region_size * sizeof(unsigned long));
+
+            min_dis = 1000;
+            for (unsigned int j = 0; j < region_size; ++j)
+            {    
+            //    bCodeRef = bCodeRef_vec[j]; 
+                bCodeRef = reduced_region_code[j];
+                dist = Compute_HD(bCodeRead, bCodeRef);
+            /*    if (min_dis > dist)
+                {
+                    min_dis_idx = j;
+                    min_dis = std::move(dist);
+                    ref_loc.clear();
+                    ref_loc.push_back(sarry.con[rpro.region_start_idx[read_region[i]] + j]);
+                }else if (min_dis == dist)
+                {
+                    ref_loc.push_back(sarry.con[rpro.region_start_idx[read_region[i]] + j]);
+                }*/
+                
+                if (min_dis > dist)
+                {
+                    min_dis_idx = j;
+                    min_dis = dist;
+                }
+            } 
+        }else
+        {
+            min_dis = 1000;
+            min_dis_idx = -1;
+        }
+
+        std::pair<int,int> para(min_dis,min_dis_idx);
+        return para;
     }
 
     int Hash_Mapping_with_SA(int pair)
     {
         std::ifstream read_region_file;
-        std::vector<uint64_t> read_region;
-
+        std::ifstream rc_read_region_file;
         std::ifstream irinfo_file("bin/reduced_region_info.bin");
-        std::vector<unsigned long> reduced_region_code;
+        
+        std::vector<uint64_t> read_region;
+        std::vector<uint64_t> rc_read_region;
+        std::vector<uint64_t> res_read_region;
+        uint64_t region = 0;
+
 
         Points read_buff;
+        std::vector<bool> is_read_rev;
 
         std::ofstream tmp_loc_file;
         std::ofstream tmp_dis_file;
         std::ofstream read_code_file;
+        std::ofstream res_read_region_file;
 
         // load ref code using memory mapping
         //MemoryMapped bCodeRef_file(REF_HASH_FILE);
@@ -616,6 +700,7 @@ public:
             read_buff.Initialize_MemoryMapped(INPUT_READ_FILE_NAME_1,Points::point_type::mapping);
 
             read_region_file.open(PAIR_1_REGION_FILE);
+            rc_read_region_file.open(PAIR_1_RC_REGION_FILE);
 
         }else if(pair == PAIR_2)
         {
@@ -623,95 +708,52 @@ public:
             read_buff.Initialize_MemoryMapped(INPUT_READ_FILE_NAME_2,Points::point_type::mapping);
 
             read_region_file.open(PAIR_2_REGION_FILE);
-
+            rc_read_region_file.open(PAIR_2_RC_REGION_FILE);
         }
 
         {
             cereal::BinaryInputArchive ar_read(read_region_file);
             ar_read(read_region);
         }
+        {
+            cereal::BinaryInputArchive ar_read(rc_read_region_file);
+            ar_read(rc_read_region);
+        }
 
         Stopwatch T0("");
         T0.Reset();     T0.Start();
 
-        int ref_size = 0;
-
-        std::vector<size_t> ref_loc;
-        mapped_res mres;
-
+        REAL_TYPE *rc_read = new REAL_TYPE [dim];
         bitset<BCODE_LEN> bCodeRead;
-        bitset<BCODE_LEN> bCodeRef;
         std::vector<bitset<BCODE_LEN>> bCodeRead_vec;
-        size_t loc_in_file = 0;
-        int region_size = 0;
-        int min_dis = 0;
-        int min_dis_idx = 0;
-        int dist = 0;
+        mapped_res mres;
+        std::pair<int,int> min_res;
 
     //    std:cout << "sarry size:" << sarry.con.size() << std::endl;
         std::vector<unsigned long> bCodeRef_vec;
         for (int i = 0; i < read_size; ++i)
         {
             src_sh.Compute_BCode<REAL_TYPE>(read_buff.d[i], bCodeRead);
-            bCodeRead_vec.push_back(bCodeRead);
 
          //   Mapping_Process
-            
-            ref_loc.clear();
-            region_size = rpro.region_end_idx[read_region[i]] - rpro.region_start_idx[read_region[i]];
-            if(read_region[i] < rpro.region_start_idx.size() && region_size > 0)
+            region = read_region[i];
+            min_res = Mapping_Process(region,irinfo_file,bCodeRead);
+            if (min_res.first > 1)
             {
-            //    std::cout << rpro.region_start_idx[read_region[i]] << "\t" << rpro.region_end_idx[read_region[i]] << std::endl;
-            
-            /*    bCodeRef_vec.resize(region_size);
-                bCodeRef_file.clear();
-                bCodeRef_file.seekg(rpro.region_start_idx[read_region[i]] * sizeof(unsigned long),bCodeRef_file.beg);
-                bCodeRef_file.read(reinterpret_cast<char*>(&bCodeRef_vec[0]),region_size * sizeof(unsigned long));*/
-
-                irinfo_file.clear();
-                irinfo_file.seekg(rpro.region_start_idx[read_region[i]] * sizeof(unsigned long), irinfo_file.beg);
-                reduced_region_code.resize(region_size);
-                irinfo_file.read(reinterpret_cast<char*>(&reduced_region_code[0]),region_size * sizeof(unsigned long));
-
-                ref_loc.clear();
-                min_dis = 1000;
-                for (unsigned int j = 0; j < region_size; ++j)
-                {    
-                //    bCodeRef = bCodeRef_vec[j]; 
-                    bCodeRef = reduced_region_code[j];
-                    dist = Compute_HD(bCodeRead, bCodeRef);
-                /*    if (min_dis > dist)
-                    {
-                        min_dis_idx = j;
-                        min_dis = std::move(dist);
-                        ref_loc.clear();
-                        ref_loc.push_back(sarry.con[rpro.region_start_idx[read_region[i]] + j]);
-                    }else if (min_dis == dist)
-                    {
-                        ref_loc.push_back(sarry.con[rpro.region_start_idx[read_region[i]] + j]);
-                    }*/
-                    
-                    if (min_dis > dist)
-                    {
-                        min_dis_idx = j;
-                        min_dis = dist;
-                    }
-                } 
-            /*    std::cout << min_dis << std::endl;
-                std::cout << bCodeRead << std::endl;
-                bCodeRef = reduced_region_code[min_dis_idx];
-                std::cout << bCodeRef << std::endl << std::endl;*/
-                ref_size += region_size;
+                reverse_complete(read_buff.d[i],rc_read);
+                src_sh.Compute_BCode<REAL_TYPE>(rc_read, bCodeRead);
+                region = rc_read_region[i];
+                min_res = Mapping_Process(region,irinfo_file,bCodeRead);
+                is_read_rev.push_back(true);
             }else
             {
-            //    ref_loc.push_back(-1);
-                min_dis = 1000;
-                min_dis_idx = -1;
+                is_read_rev.push_back(false);
             }
 
-            mres.min_code_idx.push_back(min_dis_idx);
-            mres.min_dis.push_back(min_dis);
-
+            bCodeRead_vec.push_back(bCodeRead);
+            mres.min_code_idx.push_back(min_res.second);
+            mres.min_dis.push_back(min_res.first);
+            res_read_region.push_back(region);
         /*    read_buffer_size++;
             if (read_buffer_size == buffer_size)
             {
@@ -722,8 +764,6 @@ public:
                 tmp_dis_file.write(reinterpret_cast<char *>(&mres.min_dis[0]),buffer_size * sizeof(int8_t));
             }*/
         }
-    
-        std::cout << "per ref size:" << ref_size / read_size << std::endl;
         T0.Stop();
         printf("- Total Mapping Time: (%f seconds)\n",T0.GetTime());   
         
@@ -733,21 +773,27 @@ public:
             tmp_dis_file.open(PAIR_1_DIS_FILE);
 
             read_code_file.open("tmp/read_code_1.bin");
+            res_read_region_file.open(PAIR_1_RES_REGION_FILE);
+            is_read_1_rev = std::move(is_read_rev);
         }else if(pair == PAIR_2)
         {
             tmp_loc_file.open(PAIR_2_LOC_FILE);
             tmp_dis_file.open(PAIR_2_DIS_FILE);
 
             read_code_file.open("tmp/read_code_2.bin");
+            res_read_region_file.open(PAIR_2_RES_REGION_FILE);
+            is_read_2_rev = std::move(is_read_rev);
         }
          //save to disk using cereal
         {
             cereal::BinaryOutputArchive ar_read(read_code_file);
             cereal::BinaryOutputArchive ar_loc(tmp_loc_file);
             cereal::BinaryOutputArchive ar_dis(tmp_dis_file);
+
+            cereal::BinaryOutputArchive ar_region(res_read_region_file);
             
             ar_read(CEREAL_NVP(bCodeRead_vec));
-
+            ar_region(CEREAL_NVP(res_read_region));
             ar_loc(CEREAL_NVP(mres.min_code_idx));
             ar_dis(CEREAL_NVP(mres.min_dis));
         }
@@ -760,25 +806,45 @@ public:
 
     }
 
-    void output_result(std::string readfile,std::string locfile,std::string disfile,std::string resfile,std::string code_file,std::string read_region_name)
+    void output_result(int pair)
     {
 
-        std::ofstream output(resfile);
-        std::ifstream read(readfile);
-        std::ifstream tmp_loc(locfile);
-        std::ifstream tmp_dis(disfile);
-        std::ifstream tmp_code(code_file);
-        std::ifstream refcode_file;
+        std::ofstream output;
+        std::ifstream read;
+        std::ifstream tmp_loc;
+        std::ifstream tmp_dis;
+        std::ifstream tmp_code;
 
         std::ifstream bucket_file("bin/code_bucket.bin");
-        std::ifstream read_region_file(read_region_name);
-        int start = 0;
-        int dim = DIM;
+        std::ifstream read_region_file;
+
+        std::vector<bool> is_read_rev;
+        if (pair == PAIR_1)
+        {
+            read.open(INPUT_READ_FILE_NAME_1);
+            tmp_loc.open(PAIR_1_LOC_FILE);
+            tmp_dis.open(PAIR_1_DIS_FILE);
+            tmp_code.open("tmp/read_code_1.bin");
+            output.open(PAIR_1_RES_FILE);
+            read_region_file.open(PAIR_1_RES_REGION_FILE);
+            is_read_rev = std::move(is_read_1_rev);
+        }else if (pair == PAIR_2)
+        {
+            read.open(INPUT_READ_FILE_NAME_2);
+            tmp_loc.open(PAIR_2_LOC_FILE);
+            tmp_dis.open(PAIR_2_DIS_FILE);
+            tmp_code.open("tmp/read_code_2.bin");
+            output.open(PAIR_2_RES_FILE);
+            read_region_file.open(PAIR_2_RES_REGION_FILE);
+            is_read_rev = std::move(is_read_2_rev);
+        }
+
         size_t ref_loc = 0;
         std::vector<size_t> ref_loc_vec;
         int loc_size = 0;
-    //  unsigned long ref_code;
         std::string tmp_read; 
+        std::string rev_read;
+
         // load mapping result from disk using cereal
         mapped_res mres;
         {
@@ -811,10 +877,24 @@ public:
             output << read_code[qIndex] << std::endl;
             output << "= " ;//<< tmp_read << std::endl;
 
-            for (unsigned int i = 0; i < DIM; ++i)
+            if (is_read_rev[qIndex])
             {
-                output << (char)itos_table[(int8_t)tmp_read[i]];
-            //  std::cout << (char)itos_table[(int8_t)tmp_read[i]];
+                reverse_complete(tmp_read,rev_read);
+                std::cout << rev_read << std::endl;
+                for (unsigned int i = 0; i < DIM; ++i)
+                {
+                    output << (char)itos_table[rev_read[i]];
+                //  std::cout << (char)itos_table[(int8_t)tmp_read[i]];
+                }
+                //std::cout << std::endl;
+            }else
+            {
+                for (unsigned int i = 0; i < DIM; ++i)
+                {
+                    output << (char)itos_table[(int8_t)tmp_read[i]];
+                //  std::cout << (char)itos_table[(int8_t)tmp_read[i]];
+                }
+                //std::cout << std::endl;
             }
             output << std::endl;
             
@@ -864,7 +944,6 @@ public:
         read.close();
         output.close();
         bucket_file.close();
-    //  refcode_file.close();
         T0.Stop();
         printf("- Save Mapping Results To Disk Finished (%f seconds)\n",T0.GetTime() );
     }

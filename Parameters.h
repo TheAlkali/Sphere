@@ -45,10 +45,16 @@
 #define PAIR_2 					2
 #define PAIR_1_REGION_FILE		"tmp/tmp_region_1.bin"
 #define PAIR_2_REGION_FILE		"tmp/tmp_region_2.bin"
+#define PAIR_1_RC_REGION_FILE	"tmp/tmp_rc_region_1.bin"
+#define PAIR_2_RC_REGION_FILE	"tmp/tmp_rc_region_2.bin"
+#define PAIR_1_RES_REGION_FILE	"res/res_read_region_1.bin"
+#define PAIR_2_RES_REGION_FILE	"res/res_read_region_2.bin"
+
 #define PAIR_1_LOC_FILE			"tmp/tmp_loc_1.bin"	
 #define PAIR_2_LOC_FILE			"tmp/tmp_loc_2.bin"
 #define PAIR_1_DIS_FILE			"tmp/tmp_dis_1.bin"
 #define PAIR_2_DIS_FILE			"tmp/tmp_dis_2.bin"
+
 #define PAIR_1_RES_FILE			"res/res_1.txt"
 #define PAIR_2_RES_FILE			"res/res_2.txt"
 #define PAIR_1_NAME_FILE		"dataset/tmp_name_1.bin"
