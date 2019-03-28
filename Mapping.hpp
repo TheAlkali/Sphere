@@ -408,17 +408,17 @@ public:
         T0.Stop();
         printf("- Searching Regions Finished (%f seconds)\n",T0.GetTime());
 
-        T0.Reset();     T0.Start();
+    /*    T0.Reset();     T0.Start();
         printf("- Starting To Compute Ref Hashcode ...\n");
         Compute_All_Ref_Code();
         T0.Stop();
-        printf("- Computing Hashcode Of Ref Using SH (%f seconds)\n",T0.GetTime());
+        printf("- Computing Hashcode Of Ref Using SH (%f seconds)\n",T0.GetTime());*/
 
         T0.Reset();     T0.Start();
         printf("- Starting To Merge Duplicated Hashcode In Regions ...\n");
         Merge_Duplicated_In_Region();
         T0.Stop();
-        printf("- Computing Hashcode Of Ref Using SH (%f seconds)\n",T0.GetTime());
+        printf("- Merging Duplicated Hashcode In Regions Finished (%f seconds)\n",T0.GetTime());
 
 
         //save sa region profile to disk using cereal
@@ -523,12 +523,21 @@ public:
         std::cout << "- Generate Training Data Finished ("  << T1.GetTime() << " seconds)" << std::endl;
     }*/
 
-    void REAL_TYPE_to_String(std::string &seq,REAL_TYPE *d)
+    void REAL_TYPE_to_String(std::string &seq,REAL_TYPE *d,bool is_rc)
     {
         seq = "";
-        for(int i=0;i < KMER_SIZE;i++)
+        if (!is_rc)
         {
-            seq.push_back(itoic_table[(int)d[i]]);
+            for(int i=0;i < KMER_SIZE;i++)
+            {
+                seq.push_back(itoic_table[(int)d[i]]);
+            }
+        }else
+        {
+            for(int i=0;i < KMER_SIZE;i++)
+            {
+                seq.push_back(rc_itoic_table[(int)d[dim -1 -i]]);
+            }
         }
     }
     
@@ -557,8 +566,8 @@ public:
             read_buff.Initialize (read_size,dim);
             read_buff.Initialize_MemoryMapped(INPUT_READ_FILE_NAME_2,Points::point_type::mapping);
 
-            read_region_file.open(PAIR_2_REGION_FILE,std::ios::binary | std::ios::app);
-            rc_read_region_file.open(PAIR_2_RC_REGION_FILE,std::ios::binary | std::ios::app);
+            read_region_file.open(PAIR_2_REGION_FILE,std::ios::binary);
+            rc_read_region_file.open(PAIR_2_RC_REGION_FILE,std::ios::binary);
             if(!read_region_file.is_open())
             {
                 perror(PAIR_2_REGION_FILE);
@@ -575,7 +584,7 @@ public:
         Stopwatch T0("");
         T0.Reset();     T0.Start();
       
-        std::vector<uint64_t> read_region_forward(read_size);  
+        std::vector<uint64_t> forward_read_region(read_size);  
         std::vector<uint64_t> rc_read_region(read_size);     
         std::string kmer;
         std::string rc_kmer;
@@ -584,19 +593,19 @@ public:
         std::fstream region_file;
         for (int i = 0; i < read_size; ++i)
         {     
-            REAL_TYPE_to_String(kmer,read_buff.d[i]);
+            REAL_TYPE_to_String(kmer,read_buff.d[i],false);
 
             rkmer_idx = sa_bphf->lookup(kmer);
-            read_region_forward[i] = region_bphf_idx[rkmer_idx];
+            forward_read_region[i] = region_bphf_idx[rkmer_idx];
 
-            reverse_complete(kmer,rc_kmer,true);
+            REAL_TYPE_to_String(rc_kmer,read_buff.d[i],true);
             rkmer_idx = sa_bphf->lookup(rc_kmer);
             rc_read_region[i] = region_bphf_idx[rkmer_idx];
         }
         // save read region info 
         {
             cereal::BinaryOutputArchive ar(read_region_file);
-            ar(read_region_forward);
+            ar(forward_read_region);
         }
 
         {
@@ -737,13 +746,13 @@ public:
 
          //   Mapping_Process
             region = read_region[i];
-            min_res = Mapping_Process(region,irinfo_file,bCodeRead);
+            min_res = std::move(Mapping_Process(region,irinfo_file,bCodeRead));
             if (min_res.first > 1)
             {
                 reverse_complete(read_buff.d[i],rc_read);
                 src_sh.Compute_BCode<REAL_TYPE>(rc_read, bCodeRead);
                 region = rc_read_region[i];
-                min_res = Mapping_Process(region,irinfo_file,bCodeRead);
+                min_res = std::move(Mapping_Process(region,irinfo_file,bCodeRead));
                 is_read_rev.push_back(true);
             }else
             {
@@ -869,34 +878,24 @@ public:
         Stopwatch T0("");
         T0.Reset();     T0.Start();
         for (unsigned int qIndex = 0;qIndex < mres.min_code_idx.size();++qIndex)
-    //  for (unsigned int qIndex = 0;qIndex < 1;++qIndex)
         {      
-        //    std::cout << qIndex << std::endl;   
             getline(read,tmp_read);   
             output << '>' << qIndex + 1  << ":" << mres.min_dis[qIndex] << ":" ;//<< std::endl;
-            output << read_code[qIndex] << std::endl;
-            output << "= " ;//<< tmp_read << std::endl;
+            output << read_code[qIndex] << "\t" << is_read_rev[qIndex] << std::endl;
+            output << "= " ;
 
             if (is_read_rev[qIndex])
             {
-                reverse_complete(tmp_read,rev_read);
-                std::cout << rev_read << std::endl;
-                for (unsigned int i = 0; i < DIM; ++i)
-                {
-                    output << (char)itos_table[rev_read[i]];
-                //  std::cout << (char)itos_table[(int8_t)tmp_read[i]];
-                }
-                //std::cout << std::endl;
+                reverse_complete_ictos(tmp_read,rev_read);
+                output << rev_read << std::endl;
             }else
             {
-                for (unsigned int i = 0; i < DIM; ++i)
+                for (int i = 0; i < dim; ++i)
                 {
                     output << (char)itos_table[(int8_t)tmp_read[i]];
-                //  std::cout << (char)itos_table[(int8_t)tmp_read[i]];
                 }
-                //std::cout << std::endl;
+                output << std::endl;
             }
-            output << std::endl;
             
             if (mres.min_code_idx[qIndex] >= 0)
             {
@@ -913,11 +912,9 @@ public:
                     loc_size = rpro.code_bucket_idx[read_region[qIndex]][mres.min_code_idx[qIndex] + 1] 
                         - rpro.code_bucket_idx[read_region[qIndex]][mres.min_code_idx[qIndex]];
                 }
-            //    std::cout << loc_size << std::endl;
                 ref_loc_vec.resize(loc_size);
                 bucket_file.read(reinterpret_cast<char*>(&ref_loc_vec[0]),loc_size * sizeof(size_t));
            
-            //  std::cout << mres.min_code_idx[qIndex].size() << std::endl;
                 for (unsigned int i = 0; i < ref_loc_vec.size(); ++i)
                 {
                     ref_loc = ref_loc_vec[i];
@@ -926,7 +923,6 @@ public:
                         //------ seek with sa------
                         char base;
                         output << "+ "; 
-            //          std::cout << "+ ";  
                         for (int j = 0; j < dim; ++j)
                         {
                             base = ref_string[ref_loc + j];

@@ -56,12 +56,9 @@ void reverse_complete(std::string& seq,std::string& rev_Read ) {
     //std::swap(qual, qualWork);
 }
 
-void reverse_complete(std::string& seq,std::string& rev_Read,bool flag) {
-
+void reverse_complete_ictoic(std::string& seq,std::string& rev_Read) {
     rev_Read.resize(seq.length(), 'A');
     int32_t end = seq.length()-1, start = 0;
-    //rev_Read[end] = '\0';
-    //qualWork[end] = '\0';
     while (start < end) {
         rev_Read[start] = rc_ictoic_table[(int8_t)seq[end]];
         rev_Read[end] = rc_ictoic_table[(int8_t)seq[start]];
@@ -70,18 +67,28 @@ void reverse_complete(std::string& seq,std::string& rev_Read,bool flag) {
     }
     // If odd # of bases, we still have to complement the middle
     if (start == end) {
-        rev_Read[start] = rc_ictoic_table[(int8_t)seq[start]];
+        rev_Read[start] = rc_itoi_table[(int8_t)seq[start]];
         // but don't need to mess with quality
-        // qualWork[start] = qual[start];
     }
-    //std::swap(seq, rev_Read);
-    //std::swap(qual, qualWork);
+}
+
+void reverse_complete_ictos(std::string& seq,std::string& rev_Read) {
+    rev_Read.resize(seq.length(), 'A');
+    int32_t end = seq.length()-1, start = 0;
+    while (start < end) {
+        rev_Read[start] = rc_ictos_table[(int8_t)seq[end]];
+        rev_Read[end] = rc_ictos_table[(int8_t)seq[start]];
+        ++ start;
+        -- end;
+    }
+    // If odd # of bases, we still have to complement the middle
+    if (start == end) {
+        rev_Read[start] = rc_ictos_table[(int8_t)seq[start]];
+    }
 }
 
 void reverse_complete(REAL_TYPE* seq,REAL_TYPE* rev_Read) {
     int32_t end = DIM - 1, start = 0;
-    //rev_Read[end] = '\0';
-    //qualWork[end] = '\0';
     while (start < end) {
         rev_Read[start] = rc_itoi_table[(int8_t)seq[end]];
         rev_Read[end] = rc_itoi_table[(int8_t)seq[start]];
@@ -91,11 +98,7 @@ void reverse_complete(REAL_TYPE* seq,REAL_TYPE* rev_Read) {
     // If odd # of bases, we still have to complement the middle
     if (start == end) {
         rev_Read[start] = rc_itoi_table[(int8_t)seq[start]];
-        // but don't need to mess with quality
-        // qualWork[start] = qual[start];
     }
-    //std::swap(seq, rev_Read);
-    //std::swap(qual, qualWork);
 }
 
 filetype__ get_file_type(std::ifstream &file){
@@ -394,9 +397,9 @@ size_t store_reads(){
 
 			name_vec_1.push_back(name_1);
 
-			reverse_complete(first,rc_read);
+		//	reverse_complete(first,rc_read);
 			for (int i = 0; i < klen__; ++i){
-				out_read_file_1__ << rc_read[i];
+				out_read_file_1__ << stoic_table[(int8_t)first[i]];
 			}
 			out_read_file_1__ << std::endl;
 		

@@ -35,8 +35,8 @@ int main()
 	if (gate == 0){		
 		//extract the mapping results of each aread to disk
 		SAMparser  sp;
-		char test_sam[] = "../bowtie2_res/bowtie2_res.sam";
-		char test_res[] = "bowtie2_res.txt";
+		char test_sam[] = "../rapmap_res/rapmap_mapped_reads.sam";
+		char test_res[] = "rapmap_res.txt";
 		sp.get_Sam(ref,test_sam,test_res,20000,klen);
 	}else if (gate == 1){		
 		store_reads();

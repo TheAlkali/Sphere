@@ -15,7 +15,7 @@
 int main(int argc, char const *argv[])
 //int main()
 {	
-	int gate = 1;//std::atoi(argv[1]);
+	int gate = std::atoi(argv[1]);
 //	system("rm tmp/*.log");
 	Stopwatch T0("");
     T0.Reset();     T0.Start();
