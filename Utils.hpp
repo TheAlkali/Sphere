@@ -37,11 +37,13 @@ static constexpr char rc_itoic_table[9] = {
         0, 0, 52, 0, 50, 0, 56, 0, 54
 };
 
-static constexpr char rc_ictos_table[80] = {
-        78, 78,  78, 78,  78,  78,  78, 78,  78, 78, 78, 78,  78, 78, 78, 78, 
-        78, 78,  78, 78,  78,  78,  78, 78,  78, 78, 78, 78,  78, 78, 78, 78, 
-        78, 78,  78, 78,  78,  78,  78, 78,  78, 78, 78, 78,  78, 78, 78, 78, 
-        78, 78,  84, 78,  65,  78,  71, 78,  67, 78, 78, 78,  78, 78, 78, 78 
+static constexpr char itos_table[9] = {
+        78, 78,  65, 78,  84,  78,  67, 78, 71
+
+};
+
+static constexpr char rc_ictos_table[9] = {
+        78, 78,  84, 78,  65,  78,  71, 78,  67
 
 };
 
@@ -79,7 +81,7 @@ static constexpr REAL_TYPE stoi_table[128] = {
 };
 
 //change int character to base  character
-static constexpr int8_t itos_table[80] = {
+static constexpr int8_t ictos_table[80] = {
         78, 78,  78, 78,  78,  78,  78, 78,  78, 78, 78, 78,  78, 78, 78, 78, 
         78, 78,  78, 78,  78,  78,  78, 78,  78, 78, 78, 78,  78, 78, 78, 78, 
         78, 78,  78, 78,  78,  78,  78, 78,  78, 78, 78, 78,  78, 78, 78, 78, 

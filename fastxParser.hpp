@@ -72,12 +72,12 @@ void reverse_complete_ictoic(std::string& seq,std::string& rev_Read) {
     }
 }
 
-void reverse_complete_ictos(std::string& seq,std::string& rev_Read) {
-    rev_Read.resize(seq.length(), 'A');
-    int32_t end = seq.length()-1, start = 0;
+void reverse_complete_ictos(REAL_TYPE *seq,std::string& rev_Read) {
+    rev_Read.resize(DIM, 'A');
+    int32_t end = DIM - 1, start = 0;
     while (start < end) {
-        rev_Read[start] = rc_ictos_table[(int8_t)seq[end]];
-        rev_Read[end] = rc_ictos_table[(int8_t)seq[start]];
+        rev_Read[start] = (char)rc_ictos_table[(int8_t)seq[end]];
+        rev_Read[end] = (char)rc_ictos_table[(int8_t)seq[start]];
         ++ start;
         -- end;
     }
@@ -210,12 +210,13 @@ std::string merge_ref_seq(std::string filename,int seg_len){
 	std::string seq,all_seq;
 	int len = 0;
 
-	ref_start_name rpos;
-
 	std::ofstream train_data(INPUT_REF_FILE_NAME);
 	int train_num = 0;
 	int start = KMER_SIZE;
 	int cond = BCODE_LEN * seg_len + KMER_SIZE;
+
+	std::vector<int> loc_to_ref;
+	std::vector<std::string> rname;
 
 	auto t1 = std::chrono::high_resolution_clock::now();
 	for (size  = 0;seqfile__.peek() != EOF;size++){
@@ -250,35 +251,44 @@ std::string merge_ref_seq(std::string filename,int seg_len){
 				}
 			}
 
-			rpos.rname.push_back(name);
-			rpos.ref_start.push_back(len);
-			len += seq.size() + 1;
-			for (int i = 0; i < seq.size(); ++i)
-			{
-				all_seq.push_back((char)stoic_table[(int8_t)seq[i]]);
-			}
-			all_seq.append("9");
 		}
+		rname.push_back(name);
+
+		len += seq.size() + 1;
+		loc_to_ref.resize(len,size);
+		for (int i = 0; i < seq.size(); ++i)
+		{
+			all_seq.push_back((char)stoic_table[(int8_t)seq[i]]);
+		}
+		all_seq.append("9");
 		
 	}
 	auto t2 = std::chrono::high_resolution_clock::now();
 	double fastxparser_time = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1).count();
 	std::cout << "- Total Transcriptomes:" << size << std::endl;
+	std::cout << "- The Whole Transcriptomes' Length:" << len << std::endl;
 	std::cout << "- Time Of Merging Ref Fasta (" << fastxparser_time << " seconds)" << std::endl;
 
-	// save merge seq to disk
-/*	{
-		std::ofstream ref_seq("tmp/true_ref_seq.bin");
-		cereal::BinaryOutputArchive ar(ref_seq);
-		ar(CEREAL_NVP(all_seq));
-	}*/
-	// save ref position in merged seq to disk
-	t1 = std::chrono::high_resolution_clock::now();
+	// save loc_to_ref info to disk
 	{
-		std::ofstream ref_start_name(MERGE_REF_POS_FILE);
-		cereal::BinaryOutputArchive ar(ref_start_name);
-		ar(CEREAL_NVP(rpos.ref_start),CEREAL_NVP(rpos.rname));
+		std::ofstream loc_to_ref_file(MERGE_REF_POS_FILE);
+		cereal::BinaryOutputArchive ar(loc_to_ref_file);
+		ar(CEREAL_NVP(loc_to_ref));
 	}
+
+	// save merged ref to disk
+	{
+		std::ofstream merged_ref_file("bin/merged_ref.bin");
+		cereal::BinaryOutputArchive ar(merged_ref_file);
+		ar(CEREAL_NVP(all_seq));
+	}
+
+	{
+		std::ofstream rname_file("bin/rname_ref.bin");
+		cereal::BinaryOutputArchive ar(rname_file);
+		ar(CEREAL_NVP(rname));
+	}
+
 	t2 = std::chrono::high_resolution_clock::now();
 	fastxparser_time = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1).count();
 	std::cout << "- Time Of Saving Reference Position In Merged Ref:" << fastxparser_time << std::endl;

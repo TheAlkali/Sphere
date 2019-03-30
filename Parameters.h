@@ -37,7 +37,7 @@
 #define INPUT_READ_FILE_NAME_1	"dataset/srrdata/small_srr25_1.txt"//"dataset/sim_mis_read_5_1.txt"
 #define INPUT_READ_FILE_NAME_2	"dataset/srrdata/small_srr25_2.txt"//"dataset/sim_mis_read_5_2.txt"
 
-#define MERGE_REF_POS_FILE		"dataset/merge_ref_pos.bin"
+#define MERGE_REF_POS_FILE		"dataset/loc_to_ref.bin"
 #define DIM						50
 #define SAM_FILE_LOC			"res/res.sam"
 

@@ -15,7 +15,7 @@
 int main(int argc, char const *argv[])
 //int main()
 {	
-	int gate = std::atoi(argv[1]);
+	int gate = 1;//std::atoi(argv[1]);
 //	system("rm tmp/*.log");
 	Stopwatch T0("");
     T0.Reset();     T0.Start();
@@ -54,24 +54,24 @@ int main(int argc, char const *argv[])
 		Stopwatch T2("");
 		T2.Reset();     T2.Start();
 		std::cout <<"- Analysis of read region ..." << std::endl;
-		map.Get_Read_Region(PAIR_1);
-		map.Get_Read_Region(PAIR_2);
+		map.Get_Read_Region();
 		T2.Stop();
 		std::cout << "- Analysis Finished(" << T2.GetTime() << " seconds)" << std::endl;
 
-		map.Hash_Mapping_with_SA(PAIR_1);
-		map.Hash_Mapping_with_SA(PAIR_2);
+		map.Hash_Mapping_with_SA();
+	//	map.Hash_Mapping_with_SA(PAIR_2);
 		T0.Stop();
 		printf("- Total Running Time (%f seconds)\n",T0.GetTime() );
 
 		T0.Reset();     T0.Start();
 	// 	SAMwriter sp;  
-	//    sp.gen_SAM_file();
+	//    sp.gen_SAM_file(map.rpro);
 	    printf("- Generate SAM File Finished (%f seconds)\n",T0.GetTime());
 	    T0.Stop();
-		
-		map.output_result(PAIR_1);
-		map.output_result(PAIR_2);
+		map.Load_Ref_Info();
+		map.Output_Result(PAIR_1);
+		map.Output_Result(PAIR_2);
+		//map.Ref_Of_Read();
 	}
 		
 	return 0;

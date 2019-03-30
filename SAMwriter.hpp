@@ -54,10 +54,14 @@ class SAMwriter
 private:
 //	std::shared_ptr<spdlog::logger> samlog;
 	mapped_res mres_1,mres_2;
-	ref_start_name rsn;
+//	ref_start_name rsn;
 	std::vector<ref_idx_pos> rip_vec_1,rip_vec_2;
 	std::vector<std::string> read_name;
+	std::vector<std::string> ref_name;
+	std::vector<int> loc_to_ref;
 	std::string dim_str;
+
+	std::ifstream bucket_file;
 public:
 	SAMwriter()
 	{
@@ -68,22 +72,30 @@ public:
 
 	void read_mapped_info()
 	{
+		bucket_file.open("bin/code_bucket.bin");
+
 		{
-			std::ifstream read_name_file(PAIR_1_NAME_FILE);
-			cereal::BinaryInputArchive ar_read_name(read_name_file);
-			ar_read_name(read_name);
+			std::ifstream ref_name_file("bin/rname_ref.bin");
+			cereal::BinaryInputArchive ar_ref_name(ref_name_file);
+			ar_read_name(ref_name);
 		}
 
 		{
-			std::ifstream ref_pos_file(MERGE_REF_POS_FILE);
-			cereal::BinaryInputArchive ar_ref_pos(ref_pos_file);
-			ar_ref_pos(rsn.ref_start,rsn.rname);
+			std::ifstream loc_to_ref_file(MERGE_REF_POS_FILE);
+			cereal::BinaryInputArchive ar_ref_pos(loc_to_ref_file);
+			ar_ref_pos(loc_to_ref);
 		}
 
 		{
 			std::ifstream locfile(PAIR_1_LOC_FILE);
 			cereal::BinaryInputArchive ar_loc(locfile);
-			ar_loc(mres_1.mapped_ref_loc);
+			ar_loc(mres_1.min_code_idx);
+		}
+
+		{
+			std::ifstream read_name_file(PAIR_1_NAME_FILE);
+			cereal::BinaryInputArchive ar_read_name(read_name_file);
+			ar_read_name(read_name);
 		}
 
 		{
@@ -95,7 +107,7 @@ public:
 		{
 			std::ifstream locfile(PAIR_2_LOC_FILE);
 			cereal::BinaryInputArchive ar_loc(locfile);
-			ar_loc(mres_2.mapped_ref_loc);
+			ar_loc(mres_2.min_code_idx);
 		}
 
 		{
@@ -111,10 +123,21 @@ public:
 		tmp.close();*/
 	}
 
-// TODO
-	void gen_SAM_file()
+	void gen_SAM_file(region_profile rpro)
 	{
-		//mapped_res &mres_1){
+		std::ifstream read_seq_file_1(INPUT_READ_FILE_NAME_1);
+		std::ifstream read_seq_file_2(INPUT_READ_FILE_NAME_2);
+		read_mapped_info();
+		std::ofstream samfile(SAM_FILE_LOC);
+		for (int i = 0; i < mres_1.min_code_idx.size(); ++i)
+		{
+			
+		}
+	}
+
+// TODO
+	void gen_SAM_file_Delete()
+	{
 		std::ifstream read_seq_file_1(INPUT_READ_FILE_NAME_1);
 		std::ifstream read_seq_file_2(INPUT_READ_FILE_NAME_2);
 
@@ -122,11 +145,9 @@ public:
 		SAM_format sf_1,sf_2;
 		std::ofstream samfile(SAM_FILE_LOC);
 
+		int loc = 0;
+		auto size = max(mres_1.mapped_ref_loc[read_idx].size(),mres_2.mapped_ref_loc[read_idx].size());
 		for (int read_idx = 0; read_idx < mres_1.mapped_ref_loc.size(); ++read_idx){
-		//for (int read_idx = 0; read_idx < 2; ++read_idx){
-			//for (int loc = 0; loc < mres_1.mapped_ref_loc[read_idx].size(); ++loc){
-			int loc = 0;
-			auto size = max(mres_1.mapped_ref_loc[read_idx].size(),mres_2.mapped_ref_loc[read_idx].size());
 			ref_idx_pos rip_1;
 			ref_idx_pos rip_2;
 			rip_vec_1.clear();
@@ -135,45 +156,10 @@ public:
 			{
 			//	samlog->info(SAM_format{sam.qname,sam.rname,sam.cigar,sam.rnext,sam.seq,sam.qual,sam.flag,sam.pos,sam.mapq,sam.pnext,sam.tlen});
 
-				// find the exact mapping position according to the size of transcriptomes
-				if (loc < mres_1.mapped_ref_loc[read_idx].size() && mres_1.min_dis[read_idx] <= TOLERANCE)
-				{
-					
-					for (int i = 0; i < rsn.ref_start.size(); ++i)
-					{
-						if (rsn.ref_start[i] <= mres_1.mapped_ref_loc[read_idx][loc] && rsn.ref_start[i + 1] > mres_1.mapped_ref_loc[read_idx][loc])
-						{
-							rip_1.rname = rsn.rname[i];
-							rip_1.pos_1 = std::move(mres_1.mapped_ref_loc[read_idx][loc] - rsn.ref_start[i]);
-						//	std::cout << ridx_1 << std::endl;
-							break;
-						}
-					}
-					rip_vec_1.push_back(rip_1);
-				}
-
-				if (loc < mres_2.mapped_ref_loc[read_idx].size() && mres_2.min_dis[read_idx] <= TOLERANCE)
-				{
-					
-					for (int i = 0; i < rsn.ref_start.size(); ++i)
-					{
-						if (rsn.ref_start[i] <= mres_2.mapped_ref_loc[read_idx][loc] && rsn.ref_start[i + 1] > mres_2.mapped_ref_loc[read_idx][loc])
-						{
-							rip_2.rname = rsn.rname[i];
-							rip_2.pos_2 = std::move(mres_2.mapped_ref_loc[read_idx][loc] - rsn.ref_start[i]);
-						//	std::cout << ridx_2 << std::endl << std::endl;
-							break;
-						}
-					}
-					rip_vec_2.push_back(rip_2);
-				}
 				loc++;	
 			}
 			std::vector<ref_idx_pos> rip_vec;
-		//	sort(rip_vec_1.begin(),rip_vec_1.end(),less<ref_idx_pos>());
-		//	sort(rip_vec_2.begin(),rip_vec_2.end(),less<ref_idx_pos>());
 
-		//	set_intersection(rip_vec_1.begin(),rip_vec_1.end(),rip_vec_2.begin(),rip_vec_2.end(),back_inserter(rip_vec),sort_comp);	
 			for (int i = 0; i < rip_vec_1.size(); ++i)
 			{
 				for (int j = 0; j < rip_vec_2.size(); ++j)
