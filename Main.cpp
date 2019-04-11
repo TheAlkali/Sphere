@@ -37,7 +37,7 @@ int main(int argc, char const *argv[])
 			exit(EXIT_FAILURE);
 		}
 		ref_buff.Initialize(NUM_TRAIN_SAMPLES * BCODE_LEN,seg_len);
-		ref_buff.Initialize_MemoryMapped(INPUT_REF_FILE_NAME,Points::point_type::training);
+		ref_buff.Initialize_From_File();
 		map.Learn_Spherical_Hashing(ref_buff,BCODE_LEN, seg_len);
 		ref_buff.srcfile.close();
 
@@ -59,7 +59,6 @@ int main(int argc, char const *argv[])
 		std::cout << "- Analysis Finished(" << T2.GetTime() << " seconds)" << std::endl;
 
 		map.Hash_Mapping_with_SA();
-	//	map.Hash_Mapping_with_SA(PAIR_2);
 		T0.Stop();
 		printf("- Total Running Time (%f seconds)\n",T0.GetTime() );
 
@@ -71,7 +70,42 @@ int main(int argc, char const *argv[])
 		map.Load_Ref_Info();
 		map.Output_Result(PAIR_1);
 		map.Output_Result(PAIR_2);
-		//map.Ref_Of_Read();
+	}else if (gate == 3)
+	{
+		Points ref_buff;
+		ref_buff.srcfile.open(INPUT_REF_FILE_NAME,std::ifstream::in);
+		if (!ref_buff.srcfile.is_open())
+		{
+			perror(INPUT_REF_FILE_NAME);
+			exit(EXIT_FAILURE);
+		}
+		ref_buff.Initialize(NUM_TRAIN_SAMPLES * BCODE_LEN,seg_len);
+		ref_buff.Initialize_From_File();
+		map.Learn_Spherical_Hashing(ref_buff,BCODE_LEN, seg_len);
+		ref_buff.srcfile.close();
+
+		Points test_buff;
+		test_buff.srcfile.open("dataset/srrdata/test.txt",std::ifstream::in);
+		if (!test_buff.srcfile.is_open())
+		{
+			perror("dataset/srrdata/test.txt");
+			exit(EXIT_FAILURE);
+		}
+		test_buff.Initialize(10,DIM);
+		test_buff.Initialize_From_File();
+		bitset<BCODE_LEN> code;
+		for (int i = 0; i < 10; ++i)
+		{
+			map.src_sh.Compute_BCode<REAL_TYPE>(test_buff.d[i],code);
+			std::cout << code << std::endl;
+		}
+		std::cout << std::endl;
+		map.Load_Spherical_Hashing(10,BCODE_LEN,seg_len);
+		for (int i = 0; i < 10; ++i)
+		{
+			map.src_sh.Compute_BCode<REAL_TYPE>(test_buff.d[i],code);
+			std::cout << code << std::endl;
+		}
 	}
 		
 	return 0;

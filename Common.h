@@ -88,7 +88,9 @@ RealT Compute_Distance_L2Sq(RealT *v0, RealT *v1, int dim, int start)
 	for(int i=0;i<dim;i++)
 	{
 		ret += ( v0[i] - v1[start + i] ) * ( v0[i] - v1[start + i] );
+	//	std::cout << v0[i] << "-" << v1[i] << "=" << v0[i] - v1[i] << " ";
 	}
+	
 	return ret;
 }
 
@@ -100,7 +102,6 @@ RealT Compute_Distance_L2Sq(RealT *v0, RealT *v1, int dim)
 	{
 		ret += ( v0[i] - v1[i] ) * ( v0[i] - v1[i]);
 	}
-	//std::cout << ret << std::endl;
 	return ret;
 }
 

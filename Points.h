@@ -58,7 +58,7 @@ public :
 	{
 		std::string tmp;
 		int i;
-		for(i=0;i<nP && srcfile.peek() != EOF;i++)
+		for(i=0;i < nP;i++)
 		{
 			std::getline(srcfile,tmp);
 			for(int k=0;k<dim;k++)
@@ -75,32 +75,6 @@ public :
 		}
 		return -1;
 	}
-
-/*	void Initialize_From_Bcodes(bitset<BCODE_LEN> *bcode)
-	{
-		for (int i = 0; i < nP; ++i)
-		{
-			for (int j = 0; j < dim; ++j)
-			{
-				d[i][j] = bcode[i][j];
-			}
-		}
-	}
-
-	void Initialize_For_Hashlearning()
-	{
-		std::string read;
-		for (int i = 0; i < nP; ++i)
-		{
-			int rand_loc = rand() % (nP - dim + 1);
-			srcfile.seekg(rand_loc * (dim + 1),std::ios_base::beg);
-			getline(srcfile,read);
-			for (int k = 0; k < dim; ++k)
-			{
-				d[i][k] = (REAL_TYPE)( read[k] - 48);
-			}
-		}
-	}*/
 
 	// computing center of points for zero centering
 	void Compute_Center(REAL_TYPE *center)

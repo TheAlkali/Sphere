@@ -1,6 +1,6 @@
 #pragma once
 
-#define	REAL_TYPE				float
+#define	REAL_TYPE				double
 
 
 // target number of nearest neighbors
@@ -10,7 +10,7 @@
 #define BCODE_LEN				16		
 
 // number of training samples for spherical hashing
-#define NUM_TRAIN_SAMPLES		1000
+#define NUM_TRAIN_SAMPLES		2000
 
 // desired portion of training set inside of one hyper-sphere
 #define INCLUDING_RATIO			0.5

@@ -337,35 +337,6 @@ void store_ref_kmers(std::string filename, int klen){
 	out_ref_file__.close();
 }
 
-// TODO delete
-void store_reads_name(std::string filename1){
-	open_seqfile(filename1);
-	std::vector<std::string> name_vec_1;
-	std::string name_1;
-	std::string fqual;
-	READ first;
-	filetype__ filetype = get_file_type(seqfile__);
-	if (filetype == FASTQ){
-		while(seqfile__.peek() != EOF){
-	//	for (;size < TEST_READ;size++){
-			first.clear();
-			name_1.clear();
-			read_fq_oneseq(seqfile__,name_1,first,fqual);
-
-			name_vec_1.push_back(name_1);
-		}
-	}
-	std::cout << "- store reads name finshed "<< std::endl;
-	seqfile__.close();
-
-	//store reads name
-	{
-		std::ofstream reads_name_1(PAIR_1_NAME_FILE);
-		cereal::BinaryOutputArchive ar(reads_name_1);
-		ar(name_vec_1);
-	}
-}
-
 //directly store the reads to the files
 size_t store_reads(){
 	open_seqfile(RAW_READ_FILE_1,RAW_READ_FILE_2);

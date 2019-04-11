@@ -51,16 +51,10 @@ public:
   unsigned char operator[](size_t offset) const;
 
   /// access position, including range checking
-  unsigned char at        (size_t offset) const;
-
-/*  template<typename dataType>
-  void write_at        (size_t offset) const;*/
+  unsigned long at        (size_t offset) const;
 
   /// raw access
   const unsigned char* getData() const;
-
-  /// write data to an empty file
-  void setWriteSize(uint64_t size) const;
 
   /// true, if file successfully opened
   bool isValid() const;

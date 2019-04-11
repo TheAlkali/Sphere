@@ -58,6 +58,9 @@ private:
     std::vector<std::vector<int>> ref_of_read_1;
     std::vector<std::vector<int>> ref_of_read_2;
 
+    std::vector<std::string> rcode_of_read_1;
+    std::vector<std::string> rcode_of_read_2;
+
     std::vector<std::string> ref_name;
     std::vector<int> loc_to_ref;
 
@@ -129,7 +132,7 @@ public:
                 {
                     seq[k] = ictoi_table[ref_string[sarry.con[j] + k]];
                 }
-                src_sh.Compute_BCode(seq,bCodeRef);
+                src_sh.Compute_BCode<REAL_TYPE>(seq,bCodeRef);
             //    std::cout << bCodeRef << std::endl;
                 bCodeRef_vec[ref_buffer_count] = bCodeRef.to_ulong();         
                 ref_buffer_count++;
@@ -245,24 +248,16 @@ public:
             ar(region_kmer);
         }
 
-    /*    {
+        {
             std::ifstream ref_string_file("bin/merged_ref.bin");
             cereal::BinaryInputArchive ar(ref_string_file);
             ar(ref_string);
-        }*/
+        }
         T0.Stop();
         printf("- Load Suffix Array Region Finished (%f seconds)\n",T0.GetTime());   
     //-----------------------------------
         std::string tmp = TRANSCRIPTS_FILE_NAME;
-        ref_string = merge_ref_seq(strdup(tmp.c_str()),seg_len); 
-
-
-    /*    T0.Reset();     T0.Start();
-        printf("- Starting To Merge Duplicated Hashcode In Regions ...\n");
-        Merge_Duplicated_In_Region();
-        T0.Stop();
-        printf("- Merging Duplicated Hashcode Finished(%f seconds)\n",T0.GetTime());*/
-
+    //    ref_string = merge_ref_seq(strdup(tmp.c_str()),seg_len); 
 
         T0.Reset();     T0.Start();
 
@@ -422,11 +417,11 @@ public:
         T0.Stop();
         printf("- Searching Regions Finished (%f seconds)\n",T0.GetTime());
 
-    /*    T0.Reset();     T0.Start();
+        T0.Reset();     T0.Start();
         printf("- Starting To Compute Ref Hashcode ...\n");
         Compute_All_Ref_Code();
         T0.Stop();
-        printf("- Computing Hashcode Of Ref Using SH (%f seconds)\n",T0.GetTime());*/
+        printf("- Computing Hashcode Of Ref Using SH (%f seconds)\n",T0.GetTime()); 
 
         T0.Reset();     T0.Start();
         printf("- Starting To Merge Duplicated Hashcode In Regions ...\n");
@@ -434,7 +429,7 @@ public:
         T0.Stop();
         printf("- Merging Duplicated Hashcode In Regions Finished (%f seconds)\n",T0.GetTime());
 
-
+        T0.Reset();     T0.Start();
         //save sa region profile to disk using cereal
         {
             std::ofstream region_file("sa/ref_suffix_region.bin");
@@ -575,16 +570,12 @@ public:
         read_2_region_file.close();
         rc_read_2_region_file.close();
     }
-
-    std::pair<int,int> Mapping_Process(size_t read_region,std::ifstream &irinfo_file,bitset<BCODE_LEN> bCodeRead)
-    {
-
-        std::vector<unsigned long> reduced_region_code;
-
-        
+    std::pair<int,int> Mapping_Process(size_t read_region, std::vector<unsigned long> &reduced_region_code,bitset<BCODE_LEN> bCodeRead,int pair)
+    {   
         bitset<BCODE_LEN> bCodeRef;
+        // delete
+        std::string res_code;
 
-        size_t loc_in_file = 0;
         int region_size = 0;
         int min_dis = 0;
         int min_dis_idx = 0;
@@ -593,21 +584,23 @@ public:
         region_size = rpro.region_end_idx[read_region] - rpro.region_start_idx[read_region];
         if(read_region < rpro.region_start_idx.size() && region_size > 0)
         {
-            irinfo_file.clear();
+        /*    irinfo_file.clear();
             irinfo_file.seekg(rpro.region_start_idx[read_region] * sizeof(unsigned long), irinfo_file.beg);
             reduced_region_code.resize(region_size);
-            irinfo_file.read(reinterpret_cast<char*>(&reduced_region_code[0]),region_size * sizeof(unsigned long));
+            irinfo_file.read(reinterpret_cast<char*>(&reduced_region_code[0]),region_size * sizeof(unsigned long));*/
 
             min_dis = 1000;
             for (unsigned int j = 0; j < region_size; ++j)
             {    
-                bCodeRef = reduced_region_code[j];
+                bCodeRef = reduced_region_code[rpro.region_start_idx[read_region] + j];
+            //    std::cout << reduced_region_code[rpro.region_start_idx[read_region] + j] << std::endl;
                 dist = Compute_HD(bCodeRead, bCodeRef);
                 
                 if (min_dis > dist)
                 {
                     min_dis_idx = j;
                     min_dis = dist;
+                //    res_code = bCodeRef.to_string();
                 }
             } 
         }else
@@ -615,9 +608,28 @@ public:
             min_dis = 1000;
             min_dis_idx = -1;
         }
+        if(pair == PAIR_1)
+            rcode_of_read_1.push_back(res_code);
+        else
+            rcode_of_read_2.push_back(res_code);
 
         std::pair<int,int> para(min_dis,min_dis_idx);
         return para;
+    }
+
+    void Load_Ref_Info()
+    {
+        {
+            std::ifstream ref_name_file("bin/rname_ref.bin");
+            cereal::BinaryInputArchive ar_ref_name(ref_name_file);
+            ar_ref_name(ref_name);
+        }
+
+        {
+            std::ifstream loc_to_ref_file(MERGE_REF_POS_FILE);
+            cereal::BinaryInputArchive ar_ref_pos(loc_to_ref_file);
+            ar_ref_pos(loc_to_ref);
+        }
     }
 
     int Hash_Mapping_with_SA()
@@ -628,8 +640,7 @@ public:
         std::ifstream read_2_region_file;
         std::ifstream rc_read_2_region_file;
 
-        std::ifstream irinfo_file("bin/reduced_region_info.bin");
-        
+
         std::vector<uint64_t> read_1_region;
         std::vector<uint64_t> rc_read_1_region;
         std::vector<uint64_t> res_read_1_region;
@@ -648,9 +659,14 @@ public:
         std::ofstream read_2_code_file;
         std::ofstream res_read_2_region_file;
 
-        // load ref code using memory mapping
-        //MemoryMapped bCodeRef_file(REF_HASH_FILE);
-        std::ifstream bCodeRef_file(REF_HASH_FILE);
+        // load ref code 
+        std::ifstream irinfo_file("bin/reduced_region_info.bin");
+        irinfo_file.seekg(0,irinfo_file.end);
+        int size = irinfo_file.tellg() / sizeof(unsigned long);
+        std::vector<unsigned long> reduced_region_code;
+        reduced_region_code.resize(size);
+        irinfo_file.seekg(0,irinfo_file.beg);
+        irinfo_file.read(reinterpret_cast<char*>(&reduced_region_code[0]),size * sizeof(unsigned long));
 
         is_read_1_rev.resize(read_size,false);
         is_read_2_rev.resize(read_size,true);
@@ -684,6 +700,8 @@ public:
             ar_read(rc_read_2_region);
         }
 
+        Load_Ref_Info();
+
         T0.Stop();
         printf("- Loading Reads' Info: (%f seconds)\n",T0.GetTime());
 
@@ -711,17 +729,17 @@ public:
          //   Mapping_Process
             region_1 = read_1_region[i];
             region_2 = rc_read_2_region[i];
-            min_res_1 = std::move(Mapping_Process(region_1,irinfo_file,bCodeRead_1));
-            min_res_2 = std::move(Mapping_Process(region_2,irinfo_file,bCodeRead_2));
-            if (min_res_1.first + min_res_2.first > 4)
+            min_res_1 = std::move(Mapping_Process(region_1,reduced_region_code,bCodeRead_1,PAIR_1));
+            min_res_2 = std::move(Mapping_Process(region_2,reduced_region_code,bCodeRead_2,PAIR_2));
+            if (min_res_1.first > 2 && min_res_2.first > 2)
             {
                 reverse_complete(read_1_buff.d[i],rc_read_1);
                 src_sh.Compute_BCode<REAL_TYPE>(rc_read_1, bCodeRead_1);
                 src_sh.Compute_BCode<REAL_TYPE>(read_2_buff.d[i], bCodeRead_2);
                 region_1 = rc_read_1_region[i];
                 region_2 = read_2_region[i];
-                min_res_1 = std::move(Mapping_Process(region_1,irinfo_file,bCodeRead_1));
-                min_res_2 = std::move(Mapping_Process(region_2,irinfo_file,bCodeRead_2));
+                min_res_1 = std::move(Mapping_Process(region_1,reduced_region_code,bCodeRead_1,PAIR_1));
+                min_res_2 = std::move(Mapping_Process(region_2,reduced_region_code,bCodeRead_2,PAIR_2));
                 is_read_1_rev[i] = true;
                 is_read_2_rev[i] = false;
             }
@@ -779,24 +797,10 @@ public:
             ar_loc(CEREAL_NVP(mres_2.min_code_idx));
             ar_dis(CEREAL_NVP(mres_2.min_dis));
         }
-        bCodeRef_file.close();
+        irinfo_file.close();
     }
 
 
-    void Load_Ref_Info()
-    {
-        {
-            std::ifstream ref_name_file("bin/rname_ref.bin");
-            cereal::BinaryInputArchive ar_ref_name(ref_name_file);
-            ar_ref_name(ref_name);
-        }
-
-        {
-            std::ifstream loc_to_ref_file(MERGE_REF_POS_FILE);
-            cereal::BinaryInputArchive ar_ref_pos(loc_to_ref_file);
-            ar_ref_pos(loc_to_ref);
-        }
-    }
     void Output_Result(int pair)
     {
 
@@ -809,6 +813,7 @@ public:
         std::ifstream read_region_file;
         REAL_TYPE **read;
         std::vector<bool> is_read_rev;
+        std::vector<std::string> ref_code;
         if (pair == PAIR_1)
         {
             tmp_loc.open(PAIR_1_LOC_FILE);
@@ -818,6 +823,7 @@ public:
             read_region_file.open(PAIR_1_RES_REGION_FILE);
             is_read_rev = std::move(is_read_1_rev);
             read = &read_1_buff.d[0];
+            ref_code = std::move(rcode_of_read_1);
         }else if (pair == PAIR_2)
         {
             tmp_loc.open(PAIR_2_LOC_FILE);
@@ -827,6 +833,7 @@ public:
             read_region_file.open(PAIR_2_RES_REGION_FILE);
             is_read_rev = std::move(is_read_2_rev);
             read = &read_2_buff.d[0];
+            ref_code = std::move(rcode_of_read_2);
         }
 
 
@@ -851,12 +858,25 @@ public:
             ar_read(read_region);
         }
 
+        std::vector<std::string> read_name;
+        {
+            std::ifstream read_name_file(PAIR_1_NAME_FILE);
+            cereal::BinaryInputArchive ar(read_name_file);
+            ar(read_name);
+        }
+
+        std::vector<size_t> ref_loc_vec;
+        bucket_file.seekg(0,bucket_file.end);
+        int bucket_size = bucket_file.tellg() / sizeof(size_t);
+        ref_loc_vec.resize(bucket_size);
+        bucket_file.seekg(0,bucket_file.beg);
+        bucket_file.read(reinterpret_cast<char*>(&ref_loc_vec[0]),bucket_size * sizeof(size_t));
+
         Stopwatch T0("");
         T0.Reset();     T0.Start();
 
         size_t ref_loc = 0;
         int loc_size = 0;
-        std::vector<size_t> ref_loc_vec;
         std::string tmp_read; 
         std::string rev_read;
         std::vector<std::vector<int>> ref_of_read(read_size);
@@ -868,7 +888,7 @@ public:
         for (unsigned int qIndex = 0;qIndex < mres.min_code_idx.size();++qIndex)
         {      
             output << '>' << qIndex + 1  << ":" << mres.min_dis[qIndex] << ":" ;//<< std::endl;
-            output << read_code[qIndex] << "\t" << is_read_rev[qIndex] << std::endl;
+            output << read_code[qIndex] << "\t" << "-" << is_read_rev[qIndex] << "\t" <<read_name[qIndex] << std::endl;
             output << "= " ;
 
             if (is_read_rev[qIndex])
@@ -886,8 +906,8 @@ public:
             
             if (mres.min_code_idx[qIndex] >= 0)
             {
-                bucket_file.clear();
-                bucket_file.seekg(rpro.code_bucket_idx[read_region[qIndex]][mres.min_code_idx[qIndex]] * sizeof(size_t),bucket_file.beg);
+            /*    bucket_file.clear();
+                bucket_file.seekg(rpro.code_bucket_idx[read_region[qIndex]][mres.min_code_idx[qIndex]] * sizeof(size_t),bucket_file.beg);*/
 
                 ref_loc_vec.clear();
                 if (mres.min_code_idx[qIndex] == rpro.code_bucket_idx[read_region[qIndex]].size() - 1)
@@ -899,13 +919,13 @@ public:
                     loc_size = rpro.code_bucket_idx[read_region[qIndex]][mres.min_code_idx[qIndex] + 1] 
                         - rpro.code_bucket_idx[read_region[qIndex]][mres.min_code_idx[qIndex]];
                 }
-                ref_loc_vec.resize(loc_size);
-                bucket_file.read(reinterpret_cast<char*>(&ref_loc_vec[0]),loc_size * sizeof(size_t));
+            /*    ref_loc_vec.resize(loc_size);
+                bucket_file.read(reinterpret_cast<char*>(&ref_loc_vec[0]),loc_size * sizeof(size_t));*/
                 
                 ref_of_one_read.clear();
-                for (unsigned int i = 0; i < ref_loc_vec.size(); ++i)
+                for (unsigned int i = 0; i < loc_size; ++i)
                 {
-                    ref_loc = ref_loc_vec[i];
+                    ref_loc = ref_loc_vec[rpro.code_bucket_idx[read_region[qIndex]][mres.min_code_idx[qIndex]] + i];
                     if (ref_loc > 0)
                     {
 
@@ -915,52 +935,32 @@ public:
                         {
                             output << (char)ictos_table[(int8_t)ref_string[ref_loc + j]];
                         }
-                        output << " " << ref_name[loc_to_ref[ref_loc]] << std::endl;
+                        output << " " << ref_name[loc_to_ref[ref_loc]] << " " << loc_to_ref[ref_loc] << std::endl;
                         ref_of_one_read.push_back(loc_to_ref[ref_loc]);
                     }
                 }
                 ref_of_read[qIndex] = ref_of_one_read;
             }
         }
+
         if (pair == PAIR_1)
         {
-            ref_of_read_1 = std::move(ref_of_read);
-        }else
+            {
+                std::ofstream ref_of_read_file("dataset/ref_of_read_1.bin");
+                cereal::BinaryOutputArchive ar(ref_of_read_file);
+                ar(ref_of_read);
+            }
+        }else if (pair == PAIR_2)
         {
-            ref_of_read_2 = std::move(ref_of_read);
-        }
-        {
-            std::ofstream ref_of_read_file("dataset/ref_of_read_1.bin");
-            cereal::BinaryOutputArchive ar(ref_of_read_file);
-            ar(ref_of_read_1);
-        }
-        {
-            std::ofstream ref_of_read_file("dataset/ref_of_read_2.bin");
-            cereal::BinaryOutputArchive ar(ref_of_read_file);
-            ar(ref_of_read_2);
+            {
+                std::ofstream ref_of_read_file("dataset/ref_of_read_2.bin");
+                cereal::BinaryOutputArchive ar(ref_of_read_file);
+                ar(ref_of_read);
+            }
         }
         output.close();
         bucket_file.close();
         T0.Stop();
         printf("- Save Mapping Results To Disk Finished (%f seconds)\n",T0.GetTime() );
-    }
-
-    void Ref_Of_Read()
-    {
-    //    std::ofstream file("res/ref_of_reads.txt");
-        std::vector<int> intersection;
-        std::vector<int>::iterator it;
-        std::vector<std::vector<int>> ref_of_reads;
-        for (int i = 0; i < read_size; ++i)
-        {
-            set_intersection(ref_of_read_1[i].begin(),ref_of_read_1[i].end(),ref_of_read_2[i].begin(),ref_of_read_2[i].end(),inserter(intersection,intersection.begin()));
-            ref_of_reads.push_back(intersection);
-         /*   for (it = intersection.begin(); it != intersection.end(); ++it)
-            {
-                file << ref_name[loc_to_ref[*it]] <<  "\t" ;
-            }
-            file << std::endl;*/
-        }
-        //file.close();
     }
 };

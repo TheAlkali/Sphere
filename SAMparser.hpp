@@ -85,7 +85,7 @@ public:
 
 		ss >> read_name;
 		sam_index++;
-		std::cout << read_name << std::endl;
+	//	std::cout << read_name << std::endl;
 		for (int i = 0; i < 2; ++i){
 			//ref name that one read_idx mapped to
 			ss >> ref_name;

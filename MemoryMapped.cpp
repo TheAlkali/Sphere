@@ -189,6 +189,11 @@ unsigned char MemoryMapped::operator[](size_t offset) const
   return ((unsigned char*)_mappedView)[offset];
 }
 
+unsigned long MemoryMapped::at(size_t offset) const
+{
+  return ((unsigned long*)_mappedView)[offset];
+}
+/*
 /// access position, including range checking, if out of range, increase the size of memory
 unsigned char MemoryMapped::at(size_t offset) const
 {
@@ -202,31 +207,6 @@ unsigned char MemoryMapped::at(size_t offset) const
   }
 
   return operator[](offset);
-}
-
-/*
-/// access position, including range checking, if out of range, increase the size of memory
-template<typename dataType>
-void MemoryMapped::write_at(size_t offset) const
-{
-  // checks
-  if (!_mappedView)
-    throw std::invalid_argument("No view mapped");
-  if (offset >= _mappedBytes)
-  {
-    /*
-    If mremap fails, the old memory is just fine (just like realloc).
-
-    If mremap fails, there's nothing to munmap (from this call, at least). See item 1.
-
-    If mremap succeeds and has to move, the old memory is copied into the new (and the old one munmap'ped for you). If mremap is able to increase the size in-place, 
-    the memory is not moved and no new allocation is created.
-    
-    void *_new_mappedView = mremap(_mappedView,_mappedByte,_mappedBytes0 + _growthBytes,MREMAP_MAYMOVE)
-    //if (_new_mappedView == MAP_FAILED){}
-    _mappedView = _new_mappedView
-  }
-
 }*/
 
 

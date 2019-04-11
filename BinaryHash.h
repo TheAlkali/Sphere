@@ -80,7 +80,7 @@ public :
 		for(int i=0;i<BCODE_LEN;i++)
 		{
 			ArgType dis = Compute_Distance_L2Sq<REAL_TYPE>( s[i].c , x , dim , start);
-			if( dis > s[i].rSq )
+			if( dis - s[i].rSq >0.0001)
 			{
 				y[i] = 0;
 			}
@@ -88,24 +88,25 @@ public :
 			{
 				y[i] = 1;
 			}
+			//std::cout << dis << " " << s[i].rSq << " " << y[i] << std::endl;
 			start += dim;
-		//	file << dis << "\t";
 		}
-	/*	file << std::endl;
-		file.close();*/
+	//	std::cout << y << std::endl<< std::endl;
 	}
 
 	void Save_Sphere_Info()
 	{
 		std::ofstream file;
-		file.open("bin/sphere_info.log");
+		file.open("bin/sphere_info.log");	
 		for (int i = 0; i < code_len; ++i)
 		{
 			for (int j = 0; j < dim; ++j)
 			{
 				file << s[i].c[j] << " " ;
+			//	std::cout << s[i].c[j] << "\t" ;
 			}
 			file << s[i].rSq << std::endl;
+		//	std::cout << s[i].rSq << std::endl;
 		}
 		file.close();
 	}
@@ -129,9 +130,10 @@ public :
 			for (int j = 0; j < dim; ++j)
 			{
 				ss >> s[i].c[j];
-//				std::cout << s[i].c[j] << "\t";
+			//	std::cout << s[i].c[j] << "\t";
 			}
 			ss >> s[i].rSq;
+		//	std::cout << s[i].rSq << std::endl;
 		}
 		file.close();
 	}
