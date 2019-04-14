@@ -23,7 +23,7 @@ int main(int argc, char const *argv[])
 //	kmerUtils kmutil;
 	int klen = 50;
 //	LSH lsh;
-	int gate = 6;//std::atoi(argv[1]);
+	int gate = std::atoi(argv[1]);
 
 	char ref[] = "../reference/transcripts/Homo_sapiens.GRCh38.cdna.all.fa";
 	char read1[] = "dataset/srrdata/SRR5337025_1.fastq";//"dataset/rapmap_reads_1.fastq";
@@ -39,9 +39,9 @@ int main(int argc, char const *argv[])
 	if (gate == 0){		
 		//extract the mapping results of each aread to disk
 		SAMparser  sp;
-		char test_sam[] = "../bowtie2_res/bowtie2_res.sam";
-		char test_res[] = "bowtie2_res.txt";
-		sp.get_Sam(ref,test_sam,test_res,20000,klen);
+		char test_sam[] = "../hisat2_res/hisat2_res.sam";
+		char test_res[] = "hisat2_res.txt";
+		sp.get_Sam(ref,test_sam,test_res,20748,klen);
 	}else if (gate == 1){		
 		store_reads();
 //		store_reads("../reads/single-cell-data/SRR5337/Simulate_GRCh38.1.fa",klen);
@@ -61,7 +61,7 @@ int main(int argc, char const *argv[])
 	}else if (gate == 5){
 		gen_simulate_reads_From_TXT(238956,klen);
 	}else if (gate == 6){
-		Analyse_Result_Spherical();
+	//	Analyse_Result_Spherical();
 		Analyse_Result_Others();
 	}else if (gate == 7){
 		//ref kmer count:282626422
@@ -71,31 +71,9 @@ int main(int argc, char const *argv[])
 	}else if (gate == 9)
 	{
 		analyse_tid();
-	}else if (gate == 10)
-	{
-		rand_prob();
 	}
-
 	return 0;
 } 
-
-void rand_prob(){
-	std::vector<int> nums;
-	nums.resize(42);
-	srand (time(NULL));
-	for (int i = 0; i < 42; ++i)
-	{
-		nums[i] = std::rand() % 100;
-	}
-	sort(nums.begin(),nums.end());
-	float sum = 0;
-	for (int i = 0; i < 41; ++i)
-	{
-		std::cout << (float)(nums[i+1] - nums[i]) / 100<< " ";
-		sum += (float)nums[i+1] - nums[i] ;
-	}
-	std::cout << std::endl << sum << std::endl;
-}
 
 void analyse_tid(){
 	std::vector<std::string> ref_name;
@@ -108,7 +86,7 @@ void analyse_tid(){
 	std::vector<std::string> flux_ref_name;
 	{
 		std::ifstream tid_file("analyse/flux_tid.bin");
-		cereal::BinaryInputArchive ar(tid_file);
+		cereal::BinaryInputArchive ar(tid_file);	
 		ar(flux_ref_name);
 	}
 	int count = 0;
@@ -131,7 +109,7 @@ void analyse_tid(){
 	std::cout << "flux tid count :" << flux_ref_name.size() << std::endl;
 	std::cout << "same tid count :" << same_tid.size() << std::endl;
 	{
-		std::ofstream file("sam_tid.bin");
+		std::ofstream file("../flux_test/sam_tid.bin");
 		cereal::BinaryOutputArchive ar(file);
 		ar(same_tid);
 	}
@@ -338,12 +316,12 @@ std::vector<std::string> Save_Ref_Of_Read()
         if (intersection.size() == 0)
         {
         	intersection.clear();
-        	if (min_dis_1[i] <= 1)
+        	if (min_dis_1[i] <= 1 && min_dis_2[i] > min_dis_1[i])
         	{
         		intersection = ref_of_read_1[i];
         		half_right++;
         		error_read_half << read_name[i] << "\t 1" << "\n";
-        	}else if (min_dis_2[i] <= 1)
+        	}else if (min_dis_2[i] <= 1 && min_dis_1[i] > min_dis_2[i])
         	{
         		intersection = ref_of_read_2[i];
         		half_right++;
@@ -475,7 +453,8 @@ void Analyse_Result_Spherical()
 
 void Analyse_Result_Others()
 {
-	std::ifstream sam("../rapmap_res/rapmap_mapped_reads.sam");
+//	std::ifstream sam("../bowtie2_res/bowtie2_res.sam");
+	std::ifstream sam("res/res.sam");
 	char tmp;
 	std::string line;
 	sam.get(tmp);
@@ -531,5 +510,5 @@ void Analyse_Result_Others()
 		ss >> read_name >> str >> ref_name;
 		ref_name = ref_name.substr(0,15);
 	}
-	Analyse(ref_of_reads,true_ref_of_reads,207313,false);
+	Analyse(ref_of_reads,true_ref_of_reads,20748,false);
 }

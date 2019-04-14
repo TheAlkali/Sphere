@@ -37,7 +37,14 @@
 #define INPUT_READ_FILE_NAME_1	"dataset/srrdata/small_srr25_1.txt"//"dataset/sim_mis_read_5_1.txt"
 #define INPUT_READ_FILE_NAME_2	"dataset/srrdata/small_srr25_2.txt"//"dataset/sim_mis_read_5_2.txt"
 
-#define MERGE_REF_POS_FILE		"dataset/loc_to_ref.bin"
+#define MERGE_REF_POS_FILE		"bin/loc_to_ref.bin"
+#define MERGE_REF_SEQ_FILE		"bin/merged_ref.bin"
+#define MERGE_REF_START_FILE	"bin/merged_ref_start.bin"
+#define REF_NAME_FILE			"bin/rname_ref.bin"
+
+#define REDUCED_REGION_CODE_BUCKET_FILE	"bin/code_bucket.bin"
+#define REDUCED_REGION_INFO_FILE		"bin/reduced_region_info.bin"
+
 #define DIM						50
 #define SAM_FILE_LOC			"res/res.sam"
 

@@ -6,7 +6,7 @@
 #include <cereal/types/vector.hpp>
 #include <cereal/types/string.hpp>
 #include <cereal/access.hpp> 
-/*
+
 static constexpr int8_t rc_table[128] = {
         78, 78,  78, 78,  78,  78,  78, 78,  78, 78, 78, 78,  78, 78, 78, 78, 
         78, 78,  78, 78,  78,  78,  78, 78,  78, 78, 78, 78,  78, 78, 78, 78, 
@@ -17,7 +17,7 @@ static constexpr int8_t rc_table[128] = {
         78, 84, 78, 71, 78,  78,  78, 67, 78, 78, 78, 78,  78, 78, 78, 78, // a c g to T G C
         78, 78,  78, 78,  65, 65, 78, 78,  78, 78, 78, 78,  78, 78, 78, 78  // t u to A, 78 is N
 };
-*/
+/*
 static constexpr int rc_table[128] = {
         78, 78,  78, 78,  78,  78,  78, 78,  78, 78, 78, 78,  78, 78, 78, 78, 
         78, 78,  78, 78,  78,  78,  78, 78,  78, 78, 78, 78,  78, 78, 78, 78, 
@@ -27,7 +27,7 @@ static constexpr int rc_table[128] = {
         78, 78,  78, 78,  50, 50, 78, 78,  78, 78, 78, 78,  78, 78, 78, 78, // T U to A
         78, 52, 78, 56, 78,  78,  78, 54, 78, 78, 78, 78,  78, 78, 48, 78, // a c g to T G C
         78, 78,  78, 78,  50, 50, 78, 78,  78, 78, 78, 78,  78, 78, 78, 78  // t u to A, 78 is N
-};
+};*/
 
 static constexpr REAL_TYPE rc_itoi_table[9] = {
         0, 0, 4, 0, 2, 0, 8, 0, 6
@@ -109,6 +109,7 @@ public:
     int size;
     std::vector<int> con;
     SArray(){};
+    ~SArray(){};
 
     void tran2vec()
     {
@@ -152,18 +153,6 @@ struct mapped_res
         ar(min_code_idx,min_dis);
     }
 };
-
-struct ref_start_name
-{
-    std::vector<size_t> ref_start;
-    std::vector<std::string> rname;
-    template<class Archive>
-    void serialize(Archive &ar)
-    {
-        ar(ref_start,rname);
-    }
-};
-
 
 struct singleSeqList{	
 	std::vector<std::string> seq;

@@ -216,7 +216,8 @@ std::string merge_ref_seq(std::string filename,int seg_len){
 	int cond = BCODE_LEN * seg_len + KMER_SIZE;
 
 	std::vector<int> loc_to_ref;
-	std::vector<std::string> rname;
+	std::vector<std::string> ref_name;
+	std::vector<size_t> ref_start;
 
 	auto t1 = std::chrono::high_resolution_clock::now();
 	for (size  = 0;seqfile__.peek() != EOF;size++){
@@ -252,8 +253,8 @@ std::string merge_ref_seq(std::string filename,int seg_len){
 			}
 
 		}
-		rname.push_back(name);
-
+		ref_name.push_back(name);
+		ref_start.push_back(len);
 		len += seq.size() + 1;
 		loc_to_ref.resize(len,size);
 		for (int i = 0; i < seq.size(); ++i)
@@ -278,15 +279,20 @@ std::string merge_ref_seq(std::string filename,int seg_len){
 
 	// save merged ref to disk
 	{
-		std::ofstream merged_ref_file("bin/merged_ref.bin");
+		std::ofstream merged_ref_file(MERGE_REF_SEQ_FILE);
 		cereal::BinaryOutputArchive ar(merged_ref_file);
 		ar(CEREAL_NVP(all_seq));
 	}
 
 	{
-		std::ofstream rname_file("bin/rname_ref.bin");
+		std::ofstream rname_file(REF_NAME_FILE);
 		cereal::BinaryOutputArchive ar(rname_file);
-		ar(CEREAL_NVP(rname));
+		ar(CEREAL_NVP(ref_name));
+	}
+	{
+		std::ofstream rstart_file(MERGE_REF_START_FILE);
+		cereal::BinaryOutputArchive ar(rstart_file);
+		ar(CEREAL_NVP(ref_start));
 	}
 
 	t2 = std::chrono::high_resolution_clock::now();
@@ -378,7 +384,6 @@ size_t store_reads(){
 
 			name_vec_1.push_back(name_1);
 
-		//	reverse_complete(first,rc_read);
 			for (int i = 0; i < klen__; ++i){
 				out_read_file_1__ << stoic_table[(int8_t)first[i]];
 			}

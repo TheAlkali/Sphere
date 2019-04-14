@@ -20,4 +20,5 @@ STARtest
 STARtest.cpp
 analyse/*
 hisat2test.cpp
+hisat2test
 

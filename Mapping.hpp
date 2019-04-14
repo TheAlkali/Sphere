@@ -48,13 +48,8 @@ private:
 
     const int buffer_size = 10000;
 
-    Points read_1_buff;
-    Points read_2_buff;
-
     std::vector<std::string> region_kmer;
 
-    std::vector<bool> is_read_1_rev;
-    std::vector<bool> is_read_2_rev;
     std::vector<std::vector<int>> ref_of_read_1;
     std::vector<std::vector<int>> ref_of_read_2;
 
@@ -64,11 +59,18 @@ private:
     std::vector<std::string> ref_name;
     std::vector<int> loc_to_ref;
 
-public:
-    SphericalHashing src_sh;
-    region_profile rpro;
     std::string ref_string;
     SArray sarry;
+    SphericalHashing src_sh;
+
+public:
+    //-------- preserve after mapping------
+    Points read_1_buff;
+    Points read_2_buff;
+
+    std::vector<bool> is_read_1_rev;
+    std::vector<bool> is_read_2_rev;
+    region_profile rpro;
 
     int read_size;
     int dim;
@@ -77,6 +79,56 @@ public:
     {
         dim = rdim; 
     }
+    ~Mapping(){};
+
+/*    void Release_Content()
+    {
+        region_kmer.~vector();
+        ref_of_read_1.~vector();
+        ref_of_read_2.~vector();
+        rcode_of_read_1.~vector();
+        rcode_of_read_2.~vector();
+        ref_name.~vector();
+        loc_to_ref.~vector();
+        ref_string.~string();
+        sarry.~SArray();
+        src_sh.~SphericalHashing();
+        std::cout << "- Release Mapping Content Finished" << std::endl;
+    }*/
+
+// --------friend func of SAMwriter--------------
+    std::string Get_Read_1_Buff(int idx)
+    {
+        std::string read;
+        read.resize(dim);
+        for (int i = 0; i < dim; ++i)
+        {
+            read[i] = itos_table[(int8_t)read_1_buff.d[idx][i] ];
+        }
+        return read;
+    }
+
+    std::string Get_Read_2_Buff(int idx)
+    {
+        std::string read;
+        read.resize(dim);
+        for (int i = 0; i < dim; ++i)
+        {
+            read[i] = itos_table[(int8_t)read_2_buff.d[idx][i]];
+        }
+        return read;
+    }
+
+    bool Get_Is_Read_1_Rev(int idx)
+    {
+        return is_read_1_rev[idx];
+    }
+
+    bool Get_Is_Read_2_Rev(int idx)
+    {
+        return is_read_2_rev[idx];
+    }
+//------------------------------------------------
 
     void Learn_Spherical_Hashing(Points &buff,int code_len,int seg_len)
     {
@@ -146,8 +198,8 @@ public:
 
     void Merge_Duplicated_In_Region()
     {
-        std::ofstream irinfo_file("bin/reduced_region_info.bin");
-        std::ofstream bucket_file("bin/code_bucket.bin");
+        std::ofstream irinfo_file(REDUCED_REGION_INFO_FILE);
+        std::ofstream bucket_file(REDUCED_REGION_CODE_BUCKET_FILE);
         std::ifstream bCodeRef_file(REF_HASH_FILE);
 
         std::vector<unsigned long> bCodeRef_vec;
@@ -249,7 +301,7 @@ public:
         }
 
         {
-            std::ifstream ref_string_file("bin/merged_ref.bin");
+            std::ifstream ref_string_file(MERGE_REF_SEQ_FILE);
             cereal::BinaryInputArchive ar(ref_string_file);
             ar(ref_string);
         }
@@ -257,7 +309,7 @@ public:
         printf("- Load Suffix Array Region Finished (%f seconds)\n",T0.GetTime());   
     //-----------------------------------
         std::string tmp = TRANSCRIPTS_FILE_NAME;
-    //    ref_string = merge_ref_seq(strdup(tmp.c_str()),seg_len); 
+        //ref_string = merge_ref_seq(strdup(tmp.c_str()),seg_len); 
 
         T0.Reset();     T0.Start();
 
@@ -584,16 +636,10 @@ public:
         region_size = rpro.region_end_idx[read_region] - rpro.region_start_idx[read_region];
         if(read_region < rpro.region_start_idx.size() && region_size > 0)
         {
-        /*    irinfo_file.clear();
-            irinfo_file.seekg(rpro.region_start_idx[read_region] * sizeof(unsigned long), irinfo_file.beg);
-            reduced_region_code.resize(region_size);
-            irinfo_file.read(reinterpret_cast<char*>(&reduced_region_code[0]),region_size * sizeof(unsigned long));*/
-
             min_dis = 1000;
             for (unsigned int j = 0; j < region_size; ++j)
             {    
                 bCodeRef = reduced_region_code[rpro.region_start_idx[read_region] + j];
-            //    std::cout << reduced_region_code[rpro.region_start_idx[read_region] + j] << std::endl;
                 dist = Compute_HD(bCodeRead, bCodeRef);
                 
                 if (min_dis > dist)
@@ -620,7 +666,7 @@ public:
     void Load_Ref_Info()
     {
         {
-            std::ifstream ref_name_file("bin/rname_ref.bin");
+            std::ifstream ref_name_file(REF_NAME_FILE);
             cereal::BinaryInputArchive ar_ref_name(ref_name_file);
             ar_ref_name(ref_name);
         }
@@ -660,7 +706,7 @@ public:
         std::ofstream res_read_2_region_file;
 
         // load ref code 
-        std::ifstream irinfo_file("bin/reduced_region_info.bin");
+        std::ifstream irinfo_file(REDUCED_REGION_INFO_FILE);
         irinfo_file.seekg(0,irinfo_file.end);
         int size = irinfo_file.tellg() / sizeof(unsigned long);
         std::vector<unsigned long> reduced_region_code;
@@ -809,7 +855,7 @@ public:
         std::ifstream tmp_dis;
         std::ifstream tmp_code;
 
-        std::ifstream bucket_file("bin/code_bucket.bin");
+        std::ifstream bucket_file(REDUCED_REGION_CODE_BUCKET_FILE);
         std::ifstream read_region_file;
         REAL_TYPE **read;
         std::vector<bool> is_read_rev;
@@ -906,10 +952,6 @@ public:
             
             if (mres.min_code_idx[qIndex] >= 0)
             {
-            /*    bucket_file.clear();
-                bucket_file.seekg(rpro.code_bucket_idx[read_region[qIndex]][mres.min_code_idx[qIndex]] * sizeof(size_t),bucket_file.beg);*/
-
-                ref_loc_vec.clear();
                 if (mres.min_code_idx[qIndex] == rpro.code_bucket_idx[read_region[qIndex]].size() - 1)
                 {
                     loc_size = rpro.code_bucket_idx[read_region[qIndex] + 1][0] 
@@ -919,9 +961,7 @@ public:
                     loc_size = rpro.code_bucket_idx[read_region[qIndex]][mres.min_code_idx[qIndex] + 1] 
                         - rpro.code_bucket_idx[read_region[qIndex]][mres.min_code_idx[qIndex]];
                 }
-            /*    ref_loc_vec.resize(loc_size);
-                bucket_file.read(reinterpret_cast<char*>(&ref_loc_vec[0]),loc_size * sizeof(size_t));*/
-                
+    
                 ref_of_one_read.clear();
                 for (unsigned int i = 0; i < loc_size; ++i)
                 {

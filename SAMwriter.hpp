@@ -2,8 +2,33 @@
 #include <fstream>
 
 #include "algorithm"
-#include "spdlog/fmt/ostr.h"
-#include "spdlog/sinks/basic_file_sink.h"
+#include "Mapping.hpp"
+/*#include "spdlog/fmt/ostr.h"
+#include "spdlog/sinks/basic_file_sink.h"*/
+
+struct res_analysis
+{
+    int ref_of_read;
+    int pos_of_ref_of_read_1;
+};
+
+struct res_analysis_intersection:res_analysis
+{
+    int pos_of_ref_of_read_2;
+
+    void equal_to_pair_1(res_analysis & rai)
+    {
+    	ref_of_read = rai.ref_of_read;
+    	pos_of_ref_of_read_1 = rai.pos_of_ref_of_read_1;
+    	pos_of_ref_of_read_2 = 0;
+    }
+    void equal_to_pair_2(res_analysis & rai)
+    {
+    	ref_of_read = rai.ref_of_read;
+    	pos_of_ref_of_read_2 = rai.pos_of_ref_of_read_1;
+    	pos_of_ref_of_read_1 = 0;
+    }
+};
 
 struct SAM_format{
 	std::string qname;
@@ -17,236 +42,432 @@ struct SAM_format{
 	int mapq;
 	int pnext;
 	int tlen;
-/*	template<typename OStream>
+	template<typename OStream>
     friend OStream &operator<<(OStream &os, const SAM_format &s){	
-    	os << '*' << '\t' // QNAME
-			<< '*' << '\t' // FLAGS
+    	os << s.qname << '\t' // QNAME
+			<< s.flag << '\t' // FLAGS
 			<< s.rname << '\t' // RNAME
-			<< s.pos + 1 << '\t' // pos (1-based)
+			<< s.pos << '\t' // pos (1-based)
 			<< 255 << '\t' // MAPQ
-			<< '*' << '\t' // CIGAR
-			<< '*' << '\t' // MATE NAME
-			<< 0 << '\t' // MATE pos
+			<< s.cigar << '\t' // CIGAR
+			<< '=' << '\t' // MATE NAME
+			<< s.pnext << '\t' // MATE pos
 			<< s.tlen << '\t' // TLEN
-			<< '*' << '\t' // SEQ
+			<< s.seq << '\t' // SEQ
 			<< "*\t" << '\n';// QSTR
-    }*/
+    }
 
 };
-struct ref_idx_pos
-{
-	std::string rname;
-	int pos_1;
-	int pos_2;
-	bool operator < (const ref_idx_pos &a)const 
-	{  
-	 return rname.compare(a.rname) < 0;
-	}
-};
-
-bool sort_comp(const ref_idx_pos &a,const ref_idx_pos &b)
-{
-      return a < b;
-}
 
 class SAMwriter
 {
 private:
 //	std::shared_ptr<spdlog::logger> samlog;
-	mapped_res mres_1,mres_2;
-//	ref_start_name rsn;
-	std::vector<ref_idx_pos> rip_vec_1,rip_vec_2;
-	std::vector<std::string> read_name;
-	std::vector<std::string> ref_name;
 	std::vector<int> loc_to_ref;
-	std::string dim_str;
+	std::vector<size_t> ref_start;
 
-	std::ifstream bucket_file;
+	std::vector<std::vector<res_analysis>> ra_of_read_1;
+	std::vector<std::vector<res_analysis>> ra_of_read_2;
+
+	std::vector<size_t> code_bucket;
+	std::vector<std::vector<std::string>> ref_of_merged_res;
+	std::vector<std::vector<int>> pos_1_of_ref_of_merged_res;
+	std::vector<std::vector<int>> pos_2_of_ref_of_merged_res;
+	std::vector<int> res_from_which_pair;
+
+	mapped_res mres_1,mres_2;
+	REAL_TYPE **read_1_buff;
+    REAL_TYPE **read_2_buff;
+
+    std::vector<bool> is_read_1_rev;
+    std::vector<bool> is_read_2_rev;
+    region_profile rpro;
+	int dim;
+
 public:
-	SAMwriter()
+	SAMwriter(int dim)
 	{
-		dim_str = std::to_string(DIM);
-	//	samlog = spdlog::basic_logger_mt("basic_logger",SAM_FILE_LOC);
-	//	samlog->set_pattern("..");
+		this->dim = dim;
+	};
+
+	friend std::string Mapping::Get_Read_1_Buff(int idx);
+	friend std::string Mapping::Get_Read_2_Buff(int idx);
+	friend bool Mapping::Get_Is_Read_1_Rev(int idx);
+	friend bool Mapping::Get_Is_Read_2_Rev(int idx);
+
+	void Transfer_Info_From_Mapping(std::vector<bool> &is_read_1_rev,std::vector<bool> &is_read_2_rev,REAL_TYPE **read_1_buff,REAL_TYPE **read_2_buff,region_profile &rpro)
+	{
+		this->is_read_1_rev = std::move(is_read_1_rev);
+		this->is_read_2_rev = std::move(is_read_2_rev);
+		this->rpro = std::move(rpro);
+		this->read_1_buff = &read_1_buff[0];
+		this->read_2_buff = &read_2_buff[0];
 	}
 
-	void read_mapped_info()
-	{
-		bucket_file.open("bin/code_bucket.bin");
-
-		{
-			std::ifstream ref_name_file("bin/rname_ref.bin");
-			cereal::BinaryInputArchive ar_ref_name(ref_name_file);
-			ar_read_name(ref_name);
-		}
-
-		{
-			std::ifstream loc_to_ref_file(MERGE_REF_POS_FILE);
-			cereal::BinaryInputArchive ar_ref_pos(loc_to_ref_file);
-			ar_ref_pos(loc_to_ref);
-		}
-
-		{
-			std::ifstream locfile(PAIR_1_LOC_FILE);
-			cereal::BinaryInputArchive ar_loc(locfile);
-			ar_loc(mres_1.min_code_idx);
-		}
-
-		{
-			std::ifstream read_name_file(PAIR_1_NAME_FILE);
-			cereal::BinaryInputArchive ar_read_name(read_name_file);
-			ar_read_name(read_name);
-		}
-
-		{
-			std::ifstream disfile(PAIR_1_DIS_FILE);
-			cereal::BinaryInputArchive ar_dis(disfile);
-			ar_dis(mres_1.min_dis);
-		}
-
-		{
-			std::ifstream locfile(PAIR_2_LOC_FILE);
-			cereal::BinaryInputArchive ar_loc(locfile);
-			ar_loc(mres_2.min_code_idx);
-		}
-
-		{
-			std::ifstream disfile(PAIR_2_DIS_FILE);
-			cereal::BinaryInputArchive ar_dis(disfile);
-			ar_dis(mres_2.min_dis);
-		}
-
-	/*	std::ofstream tmp("ref_loc_name.txt");
-		for (int i = 0; i < rsn.ref_start.size(); ++i){
-			tmp << rsn.ref_start[i] << "\t" << rsn.rname[i] << std::endl;
-		}
-		tmp.close();*/
+	static bool greater_comp(res_analysis a,res_analysis b){
+    	return a.ref_of_read < b.ref_of_read;
 	}
 
-	void gen_SAM_file(region_profile rpro)
+	void Load_Info()
 	{
-		std::ifstream read_seq_file_1(INPUT_READ_FILE_NAME_1);
-		std::ifstream read_seq_file_2(INPUT_READ_FILE_NAME_2);
-		read_mapped_info();
+		Stopwatch T0("");
+        T0.Reset();     T0.Start();
+
+        {
+            std::ifstream loc_to_ref_file(MERGE_REF_POS_FILE);
+            cereal::BinaryInputArchive ar_ref_pos(loc_to_ref_file);
+            ar_ref_pos(loc_to_ref);
+        }
+
+        {
+        	std::ifstream ref_start_file(MERGE_REF_START_FILE);
+        	cereal::BinaryInputArchive ar(ref_start_file);
+        	ar(ref_start);
+        }
+
+        std::ifstream bucket_file("bin/code_bucket.bin");
+        bucket_file.seekg(0,bucket_file.end);
+        int bucket_size = bucket_file.tellg() / sizeof(size_t);
+        code_bucket.resize(bucket_size);
+        bucket_file.seekg(0,bucket_file.beg);
+        bucket_file.read(reinterpret_cast<char*>(&code_bucket[0]),bucket_size * sizeof(size_t));
+        T0.Stop();
+		printf("- Load Anlysis Info Finished (%f seconds)\n",T0.GetTime() );
+	}
+
+	void Analyse_Result(int pair)
+    {
+        std::ifstream tmp_loc;
+        std::ifstream tmp_dis;
+
+        std::ifstream read_region_file;
+        if (pair == PAIR_1)
+        {
+            tmp_loc.open(PAIR_1_LOC_FILE);
+            tmp_dis.open(PAIR_1_DIS_FILE);
+	        
+            read_region_file.open(PAIR_1_RES_REGION_FILE);
+        }else if (pair == PAIR_2)
+        {
+            tmp_loc.open(PAIR_2_LOC_FILE);
+            tmp_dis.open(PAIR_2_DIS_FILE);
+            read_region_file.open(PAIR_2_RES_REGION_FILE);
+        }
+
+        mapped_res mres;
+        // load mapping result from disk using cereal
+        {
+            cereal::BinaryInputArchive ar_loc(tmp_loc);
+            cereal::BinaryInputArchive ar_dis(tmp_dis);
+            ar_loc(CEREAL_NVP(mres.min_code_idx));
+            ar_dis(CEREAL_NVP(mres.min_dis));
+        };
+
+    	std::vector<uint64_t> read_region;
+        {
+            cereal::BinaryInputArchive ar_read(read_region_file);
+            ar_read(read_region);
+        }
+
+        Stopwatch T0("");
+        T0.Reset();     T0.Start();
+
+        size_t ref_loc = 0;
+        int loc_size = 0;
+        int read_size = mres.min_code_idx.size();
+        std::vector<std::vector<res_analysis>> ra_of_read(read_size);
+        std::vector<res_analysis> ra_vec;
+        res_analysis ra;
+
+    #ifdef USE_PARALLELIZATION
+        #pragma omp parallel for
+    #endif
+        for (unsigned int qIndex = 0;qIndex < read_size;++qIndex)
+        {      
+            if (mres.min_code_idx[qIndex] >= 0)
+            {
+                if (mres.min_code_idx[qIndex] == rpro.code_bucket_idx[read_region[qIndex]].size() - 1)
+                {
+                    loc_size = rpro.code_bucket_idx[read_region[qIndex] + 1][0] 
+                        - rpro.code_bucket_idx[read_region[qIndex]][mres.min_code_idx[qIndex]];
+                }else
+                {
+                    loc_size = rpro.code_bucket_idx[read_region[qIndex]][mres.min_code_idx[qIndex] + 1] 
+                        - rpro.code_bucket_idx[read_region[qIndex]][mres.min_code_idx[qIndex]];
+                }
+                for (unsigned int i = 0; i < loc_size; ++i)
+                {
+                    ref_loc = code_bucket[rpro.code_bucket_idx[read_region[qIndex]][mres.min_code_idx[qIndex]] + i];
+                    if (ref_loc > 0)
+                    {
+                    	ra.ref_of_read = loc_to_ref[ref_loc];
+                    	ra.pos_of_ref_of_read_1 = ref_loc - ref_start[loc_to_ref[ref_loc]] + 1;
+                        ra_vec.push_back(ra);
+                    }
+                }
+                ra_of_read[qIndex] = ra_vec;
+                ra_vec.clear();
+            }
+        }
+
+        T0.Stop();
+        if (pair == PAIR_1)
+        {
+            ra_of_read_1 = std::move(ra_of_read);
+            mres_1 = std::move(mres);
+        	printf("- Analyse Result Of Pair 1 Finished (%f seconds)\n",T0.GetTime() );
+        }else if (pair == PAIR_2)
+        {
+            ra_of_read_2 = std::move(ra_of_read);
+            mres_2 = std::move(mres);
+            printf("- Analyse Result Of Pair 2 Finished (%f seconds)\n",T0.GetTime() );
+        }
+    }
+
+    void res_intersection(std::vector<res_analysis> ra_of_read_1,std::vector<res_analysis> ra_of_read_2,std::vector<res_analysis_intersection> &intersection)
+    {
+    	res_analysis_intersection rai;
+    	int idx = 0;
+    	for (int i = 0; i < ra_of_read_1.size(); ++i)
+    	{
+    		for (; idx < ra_of_read_2.size(); ++idx)
+    		{
+    			if (ra_of_read_1[i].ref_of_read == ra_of_read_2[idx].ref_of_read)
+    			{
+    				rai.ref_of_read = ra_of_read_1[i].ref_of_read;
+    				rai.pos_of_ref_of_read_1 = ra_of_read_1[i].pos_of_ref_of_read_1;
+    				rai.pos_of_ref_of_read_2 = ra_of_read_2[idx].pos_of_ref_of_read_1;
+    				intersection.push_back(rai);
+    			}else if (ra_of_read_1[i].ref_of_read < ra_of_read_2[idx].ref_of_read)
+    			{
+    				break;
+    			}
+    		}
+    	}
+    }
+	void Merge_Result()
+	{
+		std::vector<std::string> ref_name;
+		{
+	        std::ifstream ref_name_file("bin/rname_ref.bin");
+	        cereal::BinaryInputArchive ar_ref_name(ref_name_file);
+	        ar_ref_name(ref_name);
+	    }
+		
+		Stopwatch T0("");
+        T0.Reset();     T0.Start();
+
+	    std::vector<res_analysis_intersection> intersection;
+	    std::vector<res_analysis_intersection>::iterator it;
+	    std::vector<int> pos_1;
+	    std::vector<int> pos_2;
+	    std::vector<std::string> ref;
+	    std::string tmp;
+	    int read_size = ra_of_read_1.size();
+
+	    int half_right = 0;
+	    int error = 0;
+
+	#ifdef USE_PARALLELIZATION
+        #pragma omp parallel for
+    #endif
+	    for (int i = 0; i < read_size; ++i)
+	    {
+	    	ref.clear();
+	        pos_1.clear();
+	        pos_2.clear();
+	        intersection.clear();
+
+	        sort(ra_of_read_1[i].begin(),ra_of_read_1[i].end(),greater_comp);
+	        sort(ra_of_read_2[i].begin(),ra_of_read_2[i].end(),greater_comp);
+	        res_intersection(ra_of_read_1[i],ra_of_read_2[i],intersection);
+
+	        if (intersection.size() == 0)
+	        {
+	        	intersection.clear();
+	        	if (mres_1.min_dis[i] <= 1 && mres_2.min_dis[i] >= mres_1.min_dis[i])
+	        	{
+	        		intersection.resize(ra_of_read_1[i].size());
+	        		for (int j = 0; j < ra_of_read_1[i].size(); ++j)
+	        		{
+	        			intersection[j].equal_to_pair_1(ra_of_read_1[i][j]);
+
+	        		}
+	        		half_right++;
+	        		res_from_which_pair.push_back(1);
+	        	}else if (mres_2.min_dis[i] <= 1 && mres_1.min_dis[i] >= mres_2.min_dis[i])
+	        	{
+	        		intersection.resize(ra_of_read_2[i].size());
+	        		for (int j = 0; j < ra_of_read_2[i].size(); ++j)
+	        		{
+	        			intersection[j].equal_to_pair_2(ra_of_read_2[i][j]);
+	        		}
+	        		half_right++;
+	        		res_from_which_pair.push_back(2);
+	        	}else if (mres_1.min_dis[i] >= 2 && mres_2.min_dis[i] >= 2)
+	        	{
+	        		error++;
+	        		res_from_which_pair.push_back(-1);
+	        		pos_1.push_back(0);
+	        		pos_2.push_back(0);
+	        		ref.push_back("*");
+	        	}
+	        }else
+	        {
+	        	res_from_which_pair.push_back(0);
+	        }
+	        for (it = intersection.begin(); it != intersection.end(); ++it)
+	        {
+	        	tmp = ref_name[(*it).ref_of_read];
+	        	tmp = tmp.substr(0,tmp.find_first_of("."));
+	            ref.push_back(tmp);
+	        	pos_1.push_back((*it).pos_of_ref_of_read_1);
+	        	pos_2.push_back((*it).pos_of_ref_of_read_2);
+	        }
+	        
+
+        	ref_of_merged_res.push_back(ref);
+        	pos_1_of_ref_of_merged_res.push_back(pos_1);
+        	pos_2_of_ref_of_merged_res.push_back(pos_2);
+	    }
+	    T0.Stop();
+
+	    printf("- Merge Result Finished (%f seconds)\n",T0.GetTime() );
+
+	//    std::cout << "both  hamming distances are larger than 2:" << error << std::endl;
+	//    std::cout << "half right:" << half_right << std::endl;
+	}
+
+
+	void Set_Seq_Of_SAM(bool is_read_rev,SAM_format &read,REAL_TYPE *seq)
+	{
+		std::string rev_read;
+		std::string seq_str;
+		seq_str.resize(dim);
+		for (int i = 0; i < dim; ++i)
+		{
+			seq_str[i] = itos_table[(int8_t)seq[i]];
+		}
+		if (is_read_rev)
+        {
+            reverse_complete(seq_str,rev_read);
+            read.seq = rev_read;
+        }else
+        {
+        	read.seq.clear();
+        	read.seq = seq_str;
+        }	
+	}
+
+	void Set_Flag(SAM_format &read,int idx,bool is_rc)
+	{	
+		read.flag = 0;
+		if (res_from_which_pair[idx] == 0)
+		{
+			read.flag += 2;
+		}else if (res_from_which_pair[idx] == 1 && res_from_which_pair[idx] == 2)
+		{
+			read.flag += 8;
+		}else if (res_from_which_pair[idx] == -1)
+		{
+			read.flag += 4;
+		}
+
+		if (read.tlen < 0)
+		{
+			read.flag += 64;
+		}else if (read.tlen > 0)
+		{
+			read.flag += 128;
+		}
+
+		if (is_rc)
+		{
+			read.flag += 16;
+		}else
+		{
+			read.flag += 32;
+		}
+	}
+
+	void Generate_SAM(Mapping &map)
+	{
 		std::ofstream samfile(SAM_FILE_LOC);
-		for (int i = 0; i < mres_1.min_code_idx.size(); ++i)
-		{
-			
-		}
+
+		std::vector<std::string> read_name;
+	    {
+	        std::ifstream read_name_file(PAIR_1_NAME_FILE);
+	        cereal::BinaryInputArchive ar(read_name_file);
+	        ar(read_name);
+	    }
+	    SAM_format read,next_read;
+
+	    int read_size = read_name.size();
+	    std::vector<std::string> ref;
+	    std::string dim_str = std::to_string(dim);
+	    std::string rev_read;
+	    for (int i = 0; i < read_size; ++i)
+	    {
+	    	read.qname = std::move(read_name[i]);
+	    	read.tlen = dim;
+	    	read.cigar = dim_str + "M";
+
+	    	if (res_from_which_pair[i] == 1)
+	    	{
+	    		read.tlen = 0;
+	    		read.pnext = 0;
+		    	Set_Seq_Of_SAM(is_read_1_rev[i],read,read_1_buff[i]);
+		    	Set_Flag(read,i,is_read_1_rev[i]);
+		    	ref = std::move(ref_of_merged_res[i]);
+		    	for (int j = 0; j < ref.size(); ++j)
+		    	{
+	    			read.pos = pos_1_of_ref_of_merged_res[i][j];
+		    		read.rname = ref[j];
+		    		samfile << read;
+		    	}
+	    	}else if (res_from_which_pair[i] == 2)
+	    	{
+	    		read.tlen = 0;
+	    		read.pnext = 0;
+	    		Set_Seq_Of_SAM(is_read_2_rev[i],read,read_2_buff[i]);
+	    		Set_Flag(read,i,is_read_2_rev[i]);
+	    		ref = std::move(ref_of_merged_res[i]);
+		    	for (int j = 0; j < ref.size(); ++j)
+		    	{
+	    			read.pos = pos_2_of_ref_of_merged_res[i][j];
+		    		read.rname = ref[j];
+		    		samfile << read;
+		    	}
+	    	}else if (res_from_which_pair[i] == 0 || res_from_which_pair[i] == -1)
+	    	{
+	    		
+	    		next_read.qname = read.qname;
+		    	next_read.cigar = dim_str + "M";
+				
+				//std::cout << i << std::endl;
+	    		Set_Seq_Of_SAM(is_read_1_rev[i],read,read_1_buff[i]);
+	    		Set_Seq_Of_SAM(is_read_2_rev[i],next_read,read_2_buff[i]);
+	    		ref = std::move(ref_of_merged_res[i]);
+		    	for (int j = 0; j < ref.size(); ++j)
+		    	{
+		    		read.pos = pos_1_of_ref_of_merged_res[i][j];
+		    		next_read.pos = pos_2_of_ref_of_merged_res[i][j];
+		    		read.pnext = next_read.pos;
+		    		next_read.pnext = read.pos;
+
+		    		read.tlen = read.pos - next_read.pos + dim;
+		    		next_read.tlen = -read.tlen;
+
+		    		Set_Flag(read,i,is_read_1_rev[i]);
+		    		Set_Flag(next_read,i,is_read_2_rev[i]);
+
+		    		read.rname = ref[j];
+		    		next_read.rname = ref[j];
+		    		samfile << read;
+		    		samfile << next_read;
+		    	}
+	    	}
+	    }
+	    samfile.close();
 	}
-
-// TODO
-	void gen_SAM_file_Delete()
-	{
-		std::ifstream read_seq_file_1(INPUT_READ_FILE_NAME_1);
-		std::ifstream read_seq_file_2(INPUT_READ_FILE_NAME_2);
-
-		read_mapped_info();
-		SAM_format sf_1,sf_2;
-		std::ofstream samfile(SAM_FILE_LOC);
-
-		int loc = 0;
-		auto size = max(mres_1.mapped_ref_loc[read_idx].size(),mres_2.mapped_ref_loc[read_idx].size());
-		for (int read_idx = 0; read_idx < mres_1.mapped_ref_loc.size(); ++read_idx){
-			ref_idx_pos rip_1;
-			ref_idx_pos rip_2;
-			rip_vec_1.clear();
-			rip_vec_2.clear();
-			while(loc < size)
-			{
-			//	samlog->info(SAM_format{sam.qname,sam.rname,sam.cigar,sam.rnext,sam.seq,sam.qual,sam.flag,sam.pos,sam.mapq,sam.pnext,sam.tlen});
-
-				loc++;	
-			}
-			std::vector<ref_idx_pos> rip_vec;
-
-			for (int i = 0; i < rip_vec_1.size(); ++i)
-			{
-				for (int j = 0; j < rip_vec_2.size(); ++j)
-				{
-					if (rip_vec_1[i].rname.compare(rip_vec_2[j].rname) == 0)
-					{
-						rip_vec_1[i].pos_2 = std::move(rip_vec_2[j].pos_2);
-						rip_vec.push_back(std::move(rip_vec_1[i]));
-					}
-				}
-			}
-			getline(read_seq_file_1,sf_1.seq);
-			getline(read_seq_file_2,sf_2.seq);
-			for (int i = 0; i < DIM; ++i)
-			{
-				sf_1.seq[i] = (char)itos_table[sf_1.seq[i]];
-			}
-			for (int i = 0; i < DIM; ++i)
-			{
-				sf_2.seq[i] = (char)itos_table[sf_2.seq[i]];
-			}
-			for (int i = 0; i < rip_vec.size(); ++i)
-			{	
-				sf_1.rname = std::move(rip_vec[i].rname);
-				sf_1.pos = std::move(rip_vec[i].pos_1 + 1);
-				sf_2.pos = std::move(rip_vec[i].pos_2 + 1);
-				sf_1.tlen = DIM;
-				sf_1.cigar = dim_str + "M";
-				sf_2.cigar = dim_str + "M";
-			/*	if (mres_1.min_dis[read_idx] == 0){
-					sf_1.cigar = dim_str + "M";
-				}else{
-					sf_1.cigar = "X";
-				}
-
-				if (mres_2.min_dis[read_idx] == 0){
-					sf_2.cigar = dim_str + "M";
-				}else{
-					sf_2.cigar = "X";
-				}*/
-				
-				sf_1.qname = read_name[read_idx];	
-				sf_1.tlen = sf_1.pos - sf_2.pos + DIM;
-				sf_2.tlen = -sf_1.tlen;
-				sf_1.pnext = sf_2.pos;
-				sf_2.pnext = sf_1.pos;
-			/*	
-				sf_1.rnext = "*";
-				
-				sf_1.qual = "*";
-				
-
-				sf_1.flag = 0;
-				
-				sf_1.mapq = 0;
-				sf_1.pnext = 0;
-				*/
-
-				// TODO change to fmt os lib
-				samfile << sf_1.qname << '\t' // QNAME
-					<< '*' << '\t' // FLAGS
-					<< sf_1.rname << '\t' // RNAME
-					<< sf_1.pos << '\t' // pos (1-based)
-					<< 255 << '\t' // MAPQ
-					<< sf_1.cigar << '\t' // CIGAR
-					<< '=' << '\t' // MATE NAME
-					<< sf_1.pnext << '\t' // MATE pos
-					<< sf_1.tlen << '\t' // TLEN
-					<< sf_1.seq << '\t' // SEQ
-					<< "*\t" << '\n';// QSTR
-
-				samfile << sf_1.qname << '\t' // QNAME
-					<< '*' << '\t' // FLAGS
-					<< sf_1.rname << '\t' // RNAME
-					<< sf_2.pos << '\t' // pos (1-based)
-					<< 255 << '\t' // MAPQ
-					<< sf_2.cigar << '\t' // CIGAR
-					<< '=' << '\t' // MATE NAME
-					<< sf_2.pnext << '\t' // MATE pos
-					<< sf_2.tlen << '\t' // TLEN
-					<< sf_2.seq << '\t' // SEQ
-					<< "*\t" << '\n';// QSTR
-			}
-		}
-		read_seq_file_1.close();
-		read_seq_file_2.close();
-	}
-
 };
-
