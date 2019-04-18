@@ -56,6 +56,11 @@ private:
     std::vector<std::string> rcode_of_read_1;
     std::vector<std::string> rcode_of_read_2;
 
+    std::vector<uint64_t> forward_read_1_region;  
+    std::vector<uint64_t> rc_read_1_region;    
+    std::vector<uint64_t> forward_read_2_region;  
+    std::vector<uint64_t> rc_read_2_region;  
+
     std::vector<std::string> ref_name;
     std::vector<int> loc_to_ref;
 
@@ -159,9 +164,6 @@ public:
         std::ofstream bCodeRef_file;
 
         bCodeRef_file.open(REF_HASH_FILE,std::ios::binary);
-
-        Stopwatch T0("");
-        T0.Reset();     T0.Start();
         
         std::vector<unsigned long> bCodeRef_vec(buffer_size);
 
@@ -209,7 +211,8 @@ public:
         std::vector<size_t> each_bucket_idx;
 
         // record the first location that the unique hashcode appear in sa and store them in bucket
-        std::vector<int> loc_in_bucket;
+    //    std::vector<int> loc_in_bucket;
+        std::map<size_t,int> loc_in_bucket;
         int region_size = 0;
         int max_element = 0;
         int unique_size = 0;
@@ -229,16 +232,18 @@ public:
             bCodeRef_file.read(reinterpret_cast<char*>(&bCodeRef_vec[0]),region_size * sizeof(unsigned long));
 
             //find the max element in vec
-            max_element = *(std::max_element(std::begin(bCodeRef_vec), std::end(bCodeRef_vec)));
+        /*    max_element = *(std::max_element(std::begin(bCodeRef_vec), std::end(bCodeRef_vec)));
             loc_in_bucket.clear();
-            loc_in_bucket.resize(max_element + 1,-1);
+            loc_in_bucket.resize(max_element + 1,-1);*/
 
             unique_size = 0;
             reduced_region_code.clear();
             reduced_code_bucket.clear();
+            loc_in_bucket.clear();
             for (int j = 0; j < region_size; ++j)
             {
-                if (loc_in_bucket[bCodeRef_vec[j]] < 0)
+            //    if (loc_in_bucket[bCodeRef_vec[j]] < 0)
+                if (!loc_in_bucket[bCodeRef_vec[j]])
                 {
                     loc_in_bucket[bCodeRef_vec[j]] = unique_size;
                     reduced_region_code.push_back(bCodeRef_vec[j]);
@@ -264,6 +269,7 @@ public:
                 each_bucket_idx.push_back(bucket_idx);
                 bucket_idx += reduced_code_bucket[loc_in_bucket[reduced_region_code[j]]].size();
             }
+
             rpro.code_bucket_idx.push_back(each_bucket_idx);
             each_bucket_idx.clear();
         }
@@ -562,14 +568,15 @@ public:
             ar(region_bphf_idx);
         }
       
-        std::vector<uint64_t> forward_read_1_region(read_size);  
-        std::vector<uint64_t> rc_read_1_region(read_size);    
-        std::vector<uint64_t> forward_read_2_region(read_size);  
-        std::vector<uint64_t> rc_read_2_region(read_size);  
+        
         std::string kmer;
         std::string rc_kmer;
         uint64_t rkmer_idx;
         uint64_t loc_in_rpro = 0;
+        forward_read_1_region.resize(read_size);
+        forward_read_2_region.resize(read_size);
+        rc_read_1_region.resize(read_size);
+        rc_read_2_region.resize(read_size);
 
     #ifdef USE_PARALLELIZATION
         #pragma omp parallel for
@@ -596,7 +603,7 @@ public:
             rc_read_2_region[i] = region_bphf_idx[rkmer_idx];
         }
         // save read region info 
-        {
+    /*    {
             cereal::BinaryOutputArchive ar(read_1_region_file);
             ar(forward_read_1_region);
         }
@@ -620,7 +627,7 @@ public:
         rc_read_1_region_file.close();
 
         read_2_region_file.close();
-        rc_read_2_region_file.close();
+        rc_read_2_region_file.close();*/
     }
     std::pair<int,int> Mapping_Process(size_t read_region, std::vector<unsigned long> &reduced_region_code,bitset<BCODE_LEN> bCodeRead,int pair)
     {   
@@ -630,6 +637,7 @@ public:
 
         int region_size = 0;
         int min_dis = 0;
+        // TODO vector
         int min_dis_idx = 0;
         int dist = 0;
 
@@ -663,36 +671,10 @@ public:
         return para;
     }
 
-    void Load_Ref_Info()
-    {
-        {
-            std::ifstream ref_name_file(REF_NAME_FILE);
-            cereal::BinaryInputArchive ar_ref_name(ref_name_file);
-            ar_ref_name(ref_name);
-        }
-
-        {
-            std::ifstream loc_to_ref_file(MERGE_REF_POS_FILE);
-            cereal::BinaryInputArchive ar_ref_pos(loc_to_ref_file);
-            ar_ref_pos(loc_to_ref);
-        }
-    }
-
     int Hash_Mapping_with_SA()
     {
-        std::ifstream read_1_region_file;
-        std::ifstream rc_read_1_region_file;
 
-        std::ifstream read_2_region_file;
-        std::ifstream rc_read_2_region_file;
-
-
-        std::vector<uint64_t> read_1_region;
-        std::vector<uint64_t> rc_read_1_region;
         std::vector<uint64_t> res_read_1_region;
-
-        std::vector<uint64_t> read_2_region;
-        std::vector<uint64_t> rc_read_2_region;
         std::vector<uint64_t> res_read_2_region;
 
         std::ofstream tmp_loc_1_file;
@@ -717,23 +699,29 @@ public:
         is_read_1_rev.resize(read_size,false);
         is_read_2_rev.resize(read_size,true);
 
-        Stopwatch T0("");
+    /*    Stopwatch T0("");
         T0.Reset();     T0.Start();
 
+
+      
+        std::ifstream read_1_region_file;
+        std::ifstream rc_read_1_region_file;
+
+        std::ifstream read_2_region_file;
+        std::ifstream rc_read_2_region_file;  
         read_1_region_file.open(PAIR_1_REGION_FILE);
         rc_read_1_region_file.open(PAIR_1_RC_REGION_FILE);
 
         read_2_region_file.open(PAIR_2_REGION_FILE);
         rc_read_2_region_file.open(PAIR_2_RC_REGION_FILE);
-
         {
             cereal::BinaryInputArchive ar_read(read_1_region_file);
-            ar_read(read_1_region);
+            ar_read(forward_read_1_region);
         }
 
         {
             cereal::BinaryInputArchive ar_read(read_2_region_file);
-            ar_read(read_2_region);
+            ar_read(forward_read_2_region);
         }
 
         {
@@ -746,11 +734,10 @@ public:
             ar_read(rc_read_2_region);
         }
 
-        Load_Ref_Info();
-
         T0.Stop();
-        printf("- Loading Reads' Info: (%f seconds)\n",T0.GetTime());
+        printf("- Loading Reads' Info: (%f seconds)\n",T0.GetTime());*/
 
+        Stopwatch T0("");
         T0.Reset();     T0.Start();
 
         REAL_TYPE *rc_read_1 = new REAL_TYPE [dim];
@@ -773,17 +760,17 @@ public:
             src_sh.Compute_BCode<REAL_TYPE>(rc_read_2, bCodeRead_2);
 
          //   Mapping_Process
-            region_1 = read_1_region[i];
+            region_1 = forward_read_1_region[i];
             region_2 = rc_read_2_region[i];
             min_res_1 = std::move(Mapping_Process(region_1,reduced_region_code,bCodeRead_1,PAIR_1));
             min_res_2 = std::move(Mapping_Process(region_2,reduced_region_code,bCodeRead_2,PAIR_2));
-            if (min_res_1.first > 2 && min_res_2.first > 2)
+            if (min_res_1.first > filter && min_res_2.first > filter)
             {
                 reverse_complete(read_1_buff.d[i],rc_read_1);
                 src_sh.Compute_BCode<REAL_TYPE>(rc_read_1, bCodeRead_1);
                 src_sh.Compute_BCode<REAL_TYPE>(read_2_buff.d[i], bCodeRead_2);
                 region_1 = rc_read_1_region[i];
-                region_2 = read_2_region[i];
+                region_2 = forward_read_2_region[i];
                 min_res_1 = std::move(Mapping_Process(region_1,reduced_region_code,bCodeRead_1,PAIR_1));
                 min_res_2 = std::move(Mapping_Process(region_2,reduced_region_code,bCodeRead_2,PAIR_2));
                 is_read_1_rev[i] = true;
@@ -846,6 +833,20 @@ public:
         irinfo_file.close();
     }
 
+    void Load_Ref_Info()
+    {
+        {
+            std::ifstream ref_name_file(REF_NAME_FILE);
+            cereal::BinaryInputArchive ar_ref_name(ref_name_file);
+            ar_ref_name(ref_name);
+        }
+
+        {
+            std::ifstream loc_to_ref_file(MERGE_REF_POS_FILE);
+            cereal::BinaryInputArchive ar_ref_pos(loc_to_ref_file);
+            ar_ref_pos(loc_to_ref);
+        }
+    }
 
     void Output_Result(int pair)
     {
@@ -860,6 +861,7 @@ public:
         REAL_TYPE **read;
         std::vector<bool> is_read_rev;
         std::vector<std::string> ref_code;
+        Load_Ref_Info();
         if (pair == PAIR_1)
         {
             tmp_loc.open(PAIR_1_LOC_FILE);
@@ -954,8 +956,16 @@ public:
             {
                 if (mres.min_code_idx[qIndex] == rpro.code_bucket_idx[read_region[qIndex]].size() - 1)
                 {
-                    loc_size = rpro.code_bucket_idx[read_region[qIndex] + 1][0] 
-                        - rpro.code_bucket_idx[read_region[qIndex]][mres.min_code_idx[qIndex]];
+                    if (read_region[qIndex] + 1 < rpro.code_bucket_idx.size() - 1)
+                    {
+                        //std::cout <<qIndex<<"\t"<< rpro.code_bucket_idx[read_region[qIndex] + 1][0] ;
+                        //std::cout << "\t" << rpro.code_bucket_idx[read_region[qIndex]][mres.min_code_idx[qIndex]] << std::endl;
+                        loc_size = rpro.code_bucket_idx[read_region[qIndex] + 1][0] 
+                            - rpro.code_bucket_idx[read_region[qIndex]][mres.min_code_idx[qIndex]];
+                    }else
+                    {
+                        loc_size = 1;
+                    }
                 }else
                 {
                     loc_size = rpro.code_bucket_idx[read_region[qIndex]][mres.min_code_idx[qIndex] + 1] 

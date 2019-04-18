@@ -15,7 +15,7 @@
 int main(int argc, char const *argv[])
 //int main()
 {	
-	int gate = 1;//std::atoi(argv[1]);
+	int gate = std::atoi(argv[1]);
 //	system("rm tmp/*.log");
 	Stopwatch T0("");
     T0.Reset();     T0.Start();
@@ -44,35 +44,34 @@ int main(int argc, char const *argv[])
 		printf("- Index Time Finished (%f seconds)\n\n\n\n",T0.GetTime() );
 	}else if (gate == 1)
 	{
-		Mapping map(DIM);
+		Mapping *map = new Mapping(DIM);
     	int read_size = store_reads();
-		map.Load_Spherical_Hashing(read_size,BCODE_LEN,seg_len);
-		map.Load_SA(seg_len);
-
+		map->Load_Spherical_Hashing(read_size,BCODE_LEN,seg_len);
+		map->Load_SA(seg_len);
+		std::cout << "- filter:" << filter << std::endl;
 		Stopwatch T2("");
 		T2.Reset();     T2.Start();
 		std::cout <<"- Analysis of read region ..." << std::endl;
-		map.Get_Read_Region();
+		map->Get_Read_Region();
 		T2.Stop();
 		std::cout << "- Analysis Finished(" << T2.GetTime() << " seconds)" << std::endl;
 
-		map.Hash_Mapping_with_SA();
+		map->Hash_Mapping_with_SA();
 
-	 	SAMwriter sp(DIM); 
-	 	sp.Transfer_Info_From_Mapping(map.is_read_1_rev,map.is_read_2_rev,map.read_1_buff.d,map.read_2_buff.d,map.rpro);
-	 	map.~Mapping();
+	/* 	SAMwriter *sp = new SAMwriter(DIM); 
+	 	sp->Transfer_Info_From_Mapping(map->is_read_1_rev,map->is_read_2_rev,map->read_1_buff.d,map->read_2_buff.d,map->rpro);
+	 	delete map;
 
-	 	sp.Load_Info();
-	    sp.Analyse_Result(PAIR_1);
-	    sp.Analyse_Result(PAIR_2);
-	    sp.Merge_Result();
+	 	sp->Load_Info();
+	    sp->Analyse_Result_Pair();
+	    sp->Merge_Result();
 		T2.Reset();     T2.Start();
-	    sp.Generate_SAM(map);
+	    sp->Generate_SAM();
 	    T2.Stop();
-	    printf("- Generate SAM File Finished (%f seconds)\n",T2.GetTime());
-	/*	map.Load_Ref_Info();
-		map.Output_Result(PAIR_1);
-		map.Output_Result(PAIR_2);*/
+	    printf("- Generate SAM File Finished (%f seconds)\n",T2.GetTime());*/
+		map->Load_Ref_Info();
+		map->Output_Result(PAIR_1);
+		map->Output_Result(PAIR_2);
 		T0.Stop();
 		printf("- Total Running Time (%f seconds)\n",T0.GetTime() );
 	}

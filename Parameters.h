@@ -7,7 +7,7 @@
 #define KNN						5
 
 // binary code length
-#define BCODE_LEN				16		
+#define BCODE_LEN				30		
 
 // number of training samples for spherical hashing
 #define NUM_TRAIN_SAMPLES		2000
@@ -45,7 +45,7 @@
 #define REDUCED_REGION_CODE_BUCKET_FILE	"bin/code_bucket.bin"
 #define REDUCED_REGION_INFO_FILE		"bin/reduced_region_info.bin"
 
-#define DIM						50
+#define DIM						76
 #define SAM_FILE_LOC			"res/res.sam"
 
 #define PAIR_1 					1

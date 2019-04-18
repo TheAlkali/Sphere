@@ -102,6 +102,8 @@ static constexpr char itoic_table[80] = {
         48, 0,  50, 0,  52,  0,  54, 0,  56, 57
 };
 
+static int filter = floor((float)exp((float)(BCODE_LEN / 10)) / 3);
+
 class SArray
 {
 public:

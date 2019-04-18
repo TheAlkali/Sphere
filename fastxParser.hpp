@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <chrono>
 #include <cereal/archives/binary.hpp>
+#include "Stopwatch.hpp"
 
 #include "Utils.hpp"
 
@@ -372,6 +373,9 @@ size_t store_reads(){
 	filetype__ filetype = get_file_type(seqfile__);
 	filetype__ filetype2 = get_file_type(seqfile2__);
 	std::string rc_read;
+	
+	Stopwatch T0("");
+    T0.Reset();     T0.Start();
 	if (filetype == FASTQ && filetype2 == FASTQ){
 		for (;seqfile__.peek() != EOF && seqfile2__.peek() != EOF;size++){
 	//	for (;size < TEST_READ;size++){
@@ -387,16 +391,18 @@ size_t store_reads(){
 			for (int i = 0; i < klen__; ++i){
 				out_read_file_1__ << stoic_table[(int8_t)first[i]];
 			}
-			out_read_file_1__ << std::endl;
+			out_read_file_1__ << "\n";
 		
 			// pair 2 reverse complete
 			
 			for (int i = 0; i < klen__; ++i){
 				out_read_file_2__ << stoic_table[(int8_t)second[i]];
 			}
-			out_read_file_2__ << std::endl;
+			out_read_file_2__ << "\n";
 		}
 	}
+	T0.Stop();
+	std::cout << "- Parse Fastq File Finished(" << T0.GetTime() << " seconds)" << std::endl;
 	std::cout << "- total reads:" << size << std::endl;
 	seqfile__.close();
 	seqfile2__.close();

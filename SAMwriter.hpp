@@ -49,7 +49,7 @@ struct SAM_format{
 			<< s.rname << '\t' // RNAME
 			<< s.pos << '\t' // pos (1-based)
 			<< 255 << '\t' // MAPQ
-			<< s.cigar << '\t' // CIGAR
+			<< "50M" << '\t' // CIGAR
 			<< '=' << '\t' // MATE NAME
 			<< s.pnext << '\t' // MATE pos
 			<< s.tlen << '\t' // TLEN
@@ -69,13 +69,12 @@ private:
 	std::vector<std::vector<res_analysis>> ra_of_read_1;
 	std::vector<std::vector<res_analysis>> ra_of_read_2;
 
-	std::vector<size_t> code_bucket;
 	std::vector<std::vector<std::string>> ref_of_merged_res;
 	std::vector<std::vector<int>> pos_1_of_ref_of_merged_res;
 	std::vector<std::vector<int>> pos_2_of_ref_of_merged_res;
 	std::vector<int> res_from_which_pair;
 
-	mapped_res mres_1,mres_2;
+	std::vector<int> mres_1_min_dis,mres_2_min_dis;
 	REAL_TYPE **read_1_buff;
     REAL_TYPE **read_2_buff;
 
@@ -83,6 +82,9 @@ private:
     std::vector<bool> is_read_2_rev;
     region_profile rpro;
 	int dim;
+
+	int flag_1[4] = {4,8,8,2};
+	int flag_2[2] = {32,16};
 
 public:
 	SAMwriter(int dim)
@@ -124,18 +126,11 @@ public:
         	cereal::BinaryInputArchive ar(ref_start_file);
         	ar(ref_start);
         }
-
-        std::ifstream bucket_file("bin/code_bucket.bin");
-        bucket_file.seekg(0,bucket_file.end);
-        int bucket_size = bucket_file.tellg() / sizeof(size_t);
-        code_bucket.resize(bucket_size);
-        bucket_file.seekg(0,bucket_file.beg);
-        bucket_file.read(reinterpret_cast<char*>(&code_bucket[0]),bucket_size * sizeof(size_t));
         T0.Stop();
-		printf("- Load Anlysis Info Finished (%f seconds)\n",T0.GetTime() );
+        printf("- Load Ref Info Finished (%f seconds)\n",T0.GetTime() );
 	}
 
-	void Analyse_Result(int pair)
+	void Analyse_Result(int pair,std::vector<size_t> &code_bucket)
     {
         std::ifstream tmp_loc;
         std::ifstream tmp_dis;
@@ -188,8 +183,14 @@ public:
             {
                 if (mres.min_code_idx[qIndex] == rpro.code_bucket_idx[read_region[qIndex]].size() - 1)
                 {
-                    loc_size = rpro.code_bucket_idx[read_region[qIndex] + 1][0] 
-                        - rpro.code_bucket_idx[read_region[qIndex]][mres.min_code_idx[qIndex]];
+                	if (read_region[qIndex] + 1 < rpro.code_bucket_idx.size() - 1)
+                    {
+                    	loc_size = rpro.code_bucket_idx[read_region[qIndex] + 1][0] 
+                        	- rpro.code_bucket_idx[read_region[qIndex]][mres.min_code_idx[qIndex]];
+                    }else
+                    {
+                    	loc_size  = 1;
+                    }
                 }else
                 {
                     loc_size = rpro.code_bucket_idx[read_region[qIndex]][mres.min_code_idx[qIndex] + 1] 
@@ -214,14 +215,33 @@ public:
         if (pair == PAIR_1)
         {
             ra_of_read_1 = std::move(ra_of_read);
-            mres_1 = std::move(mres);
+            mres_1_min_dis = std::move(mres.min_dis);
         	printf("- Analyse Result Of Pair 1 Finished (%f seconds)\n",T0.GetTime() );
         }else if (pair == PAIR_2)
         {
             ra_of_read_2 = std::move(ra_of_read);
-            mres_2 = std::move(mres);
+            mres_2_min_dis = std::move(mres.min_dis);
             printf("- Analyse Result Of Pair 2 Finished (%f seconds)\n",T0.GetTime() );
         }
+    }
+
+    void Analyse_Result_Pair()
+    {
+    	std::vector<size_t> code_bucket;
+
+    	Stopwatch T0("");
+    	T0.Reset();     T0.Start();
+        std::ifstream bucket_file("bin/code_bucket.bin");
+        bucket_file.seekg(0,bucket_file.end);
+        int bucket_size = bucket_file.tellg() / sizeof(size_t);
+        code_bucket.resize(bucket_size);
+        bucket_file.seekg(0,bucket_file.beg);
+        bucket_file.read(reinterpret_cast<char*>(&code_bucket[0]),bucket_size * sizeof(size_t));
+        T0.Stop();
+		printf("- Load Code Bucket Info Finished (%f seconds)\n",T0.GetTime() );
+
+		Analyse_Result(PAIR_1,code_bucket);
+		Analyse_Result(PAIR_2,code_bucket);
     }
 
     void res_intersection(std::vector<res_analysis> ra_of_read_1,std::vector<res_analysis> ra_of_read_2,std::vector<res_analysis_intersection> &intersection)
@@ -249,7 +269,7 @@ public:
 	{
 		std::vector<std::string> ref_name;
 		{
-	        std::ifstream ref_name_file("bin/rname_ref.bin");
+	        std::ifstream ref_name_file(REF_NAME_FILE);
 	        cereal::BinaryInputArchive ar_ref_name(ref_name_file);
 	        ar_ref_name(ref_name);
 	    }
@@ -285,7 +305,7 @@ public:
 	        if (intersection.size() == 0)
 	        {
 	        	intersection.clear();
-	        	if (mres_1.min_dis[i] <= 1 && mres_2.min_dis[i] >= mres_1.min_dis[i])
+	        	if (mres_1_min_dis[i] < filter && mres_2_min_dis[i] >= mres_1_min_dis[i])
 	        	{
 	        		intersection.resize(ra_of_read_1[i].size());
 	        		for (int j = 0; j < ra_of_read_1[i].size(); ++j)
@@ -295,7 +315,7 @@ public:
 	        		}
 	        		half_right++;
 	        		res_from_which_pair.push_back(1);
-	        	}else if (mres_2.min_dis[i] <= 1 && mres_1.min_dis[i] >= mres_2.min_dis[i])
+	        	}else if (mres_2_min_dis[i] < filter && mres_1_min_dis[i] >= mres_2_min_dis[i])
 	        	{
 	        		intersection.resize(ra_of_read_2[i].size());
 	        		for (int j = 0; j < ra_of_read_2[i].size(); ++j)
@@ -304,22 +324,21 @@ public:
 	        		}
 	        		half_right++;
 	        		res_from_which_pair.push_back(2);
-	        	}else if (mres_1.min_dis[i] >= 2 && mres_2.min_dis[i] >= 2)
+	        	}else if (mres_1_min_dis[i] >= 2 && mres_2_min_dis[i] >= 2)
 	        	{
 	        		error++;
-	        		res_from_which_pair.push_back(-1);
+	        		res_from_which_pair.push_back(0);
 	        		pos_1.push_back(0);
 	        		pos_2.push_back(0);
 	        		ref.push_back("*");
 	        	}
 	        }else
 	        {
-	        	res_from_which_pair.push_back(0);
+	        	res_from_which_pair.push_back(3);
 	        }
 	        for (it = intersection.begin(); it != intersection.end(); ++it)
 	        {
 	        	tmp = ref_name[(*it).ref_of_read];
-	        	tmp = tmp.substr(0,tmp.find_first_of("."));
 	            ref.push_back(tmp);
 	        	pos_1.push_back((*it).pos_of_ref_of_read_1);
 	        	pos_2.push_back((*it).pos_of_ref_of_read_2);
@@ -358,20 +377,11 @@ public:
         	read.seq = seq_str;
         }	
 	}
-
-	void Set_Flag(SAM_format &read,int idx,bool is_rc)
+	
+	void Set_Flag(SAM_format &read,int idx,int is_rc)
 	{	
 		read.flag = 0;
-		if (res_from_which_pair[idx] == 0)
-		{
-			read.flag += 2;
-		}else if (res_from_which_pair[idx] == 1 && res_from_which_pair[idx] == 2)
-		{
-			read.flag += 8;
-		}else if (res_from_which_pair[idx] == -1)
-		{
-			read.flag += 4;
-		}
+		read.flag += flag_1[res_from_which_pair[idx]];
 
 		if (read.tlen < 0)
 		{
@@ -381,16 +391,17 @@ public:
 			read.flag += 128;
 		}
 
-		if (is_rc)
+		read.flag += flag_2[is_rc];
+	/*	if (is_rc)
 		{
 			read.flag += 16;
 		}else
 		{
 			read.flag += 32;
-		}
+		}*/
 	}
 
-	void Generate_SAM(Mapping &map)
+	void Generate_SAM()
 	{
 		std::ofstream samfile(SAM_FILE_LOC);
 
@@ -406,11 +417,14 @@ public:
 	    std::vector<std::string> ref;
 	    std::string dim_str = std::to_string(dim);
 	    std::string rev_read;
+	#ifdef USE_PARALLELIZATION
+        #pragma omp parallel for
+    #endif
 	    for (int i = 0; i < read_size; ++i)
 	    {
 	    	read.qname = std::move(read_name[i]);
 	    	read.tlen = dim;
-	    	read.cigar = dim_str + "M";
+	    //	read.cigar = dim_str + "M";
 
 	    	if (res_from_which_pair[i] == 1)
 	    	{
@@ -438,13 +452,12 @@ public:
 		    		read.rname = ref[j];
 		    		samfile << read;
 		    	}
-	    	}else if (res_from_which_pair[i] == 0 || res_from_which_pair[i] == -1)
+	    	}else if (res_from_which_pair[i] == 3 || res_from_which_pair[i] == 0)
 	    	{
 	    		
 	    		next_read.qname = read.qname;
-		    	next_read.cigar = dim_str + "M";
-				
-				//std::cout << i << std::endl;
+		    //	next_read.cigar = dim_str + "M";
+
 	    		Set_Seq_Of_SAM(is_read_1_rev[i],read,read_1_buff[i]);
 	    		Set_Seq_Of_SAM(is_read_2_rev[i],next_read,read_2_buff[i]);
 	    		ref = std::move(ref_of_merged_res[i]);

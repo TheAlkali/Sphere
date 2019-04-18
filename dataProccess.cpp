@@ -9,11 +9,11 @@
 
 //#include"benchmark.hpp"
 
-void gen_simulate_reads(char*,char*, singleSeqList*,int);
-void gen_simulate_reads_From_TXT(int,int);
 void Analyse_Result_Spherical();
 void count_ref_kmer(std::string);
-void Analyse_Result_Others();
+void Analyse_Result(std::string,bool flag,std::vector<std::vector<std::string>>&,int);
+void Analyse_True_Result(std::vector<std::vector<std::string>>);
+void Intersection_Of_True_Results(std::vector<std::vector<std::string>>,std::vector<std::vector<std::string>>);
 void analyse_tid();
 void rand_prob();
 
@@ -21,7 +21,7 @@ int main(int argc, char const *argv[])
 //int main()
 {
 //	kmerUtils kmutil;
-	int klen = 50;
+	int klen = 100;
 //	LSH lsh;
 	int gate = std::atoi(argv[1]);
 
@@ -39,16 +39,13 @@ int main(int argc, char const *argv[])
 	if (gate == 0){		
 		//extract the mapping results of each aread to disk
 		SAMparser  sp;
-		char test_sam[] = "../hisat2_res/hisat2_res.sam";
-		char test_res[] = "hisat2_res.txt";
-		sp.get_Sam(ref,test_sam,test_res,20748,klen);
+		char test_sam[] = "../rapmap_res/rapmap_res.sam";
+		char test_res[] = "rapmap_res.txt";
+		sp.get_Sam(ref,test_sam,test_res,2522231,klen);
 	}else if (gate == 1){		
 		store_reads();
 //		store_reads("../reads/single-cell-data/SRR5337/Simulate_GRCh38.1.fa",klen);
 //		store_ref_kmers(ref,klen);
-	}else if (gate == 2){		
-		gen_simulate_reads(read1,ref,reflist,klen);
-		gen_simulate_reads(read2,ref,reflist,klen);
 	}else if (gate == 3){
 		//merge all refs to one
 		merge_ref_seq(ref,1);
@@ -58,11 +55,39 @@ int main(int argc, char const *argv[])
 		kmutil.genkmers_from_all_transcripts(reflist);
 		delete reflist;
 		refklist = kmutil.get_kmer_list();*/
-	}else if (gate == 5){
-		gen_simulate_reads_From_TXT(238956,klen);
+	}else if (gate == 5)
+	{
+		std::vector<std::vector<std::string>> bowtie_ref_name_vec;
+		std::vector<std::vector<std::string>> hisat_ref_name_vec;
+		std::vector<std::vector<std::string>> rapmap_ref_name_vec;
+		std::vector<std::vector<std::string>> sphere_ref_name_vec;
+
+		Analyse_Result_Spherical();
+
+	//	Analyse_Result("../hisat2_res/hisat2_res.sam",false,hisat_ref_name_vec,2869774);
+	//	Analyse_Result("../bowtie2_res/bowtie2_res.sam",false,bowtie_ref_name_vec,2522231);
+	//	Analyse_Result("../rapmap_res/rapmap_res.sam",false,rapmap_ref_name_vec,2522231);
+	//	Analyse_Result("res/res.sam",false,sphere_ref_name_vec,2522231);
 	}else if (gate == 6){
+		std::vector<std::vector<std::string>> bowtie_ref_name_vec;
+		std::vector<std::vector<std::string>> hisat_ref_name_vec;
+		std::vector<std::vector<std::string>> rapmap_ref_name_vec;
+		std::vector<std::vector<std::string>> sphere_ref_name_vec;
 	//	Analyse_Result_Spherical();
-		Analyse_Result_Others();
+
+		Analyse_Result("../hisat2_res/true_hisat2_res.sam",true,hisat_ref_name_vec,2522231);
+		Analyse_Result("../bowtie2_res/true_bowtie2_res.sam",true,bowtie_ref_name_vec,2522231);
+	//	Analyse_Result("../rapmap_res/true_rapmap_res.sam",true,rapmap_ref_name_vec,2522231);
+		Analyse_Result("res/true_res.sam",true,sphere_ref_name_vec,2522231);
+
+		std::cout << "bowtie2 and hisat2" << std::endl;
+		Intersection_Of_True_Results(bowtie_ref_name_vec,hisat_ref_name_vec);
+		std::cout << "sphere and hisat" << std::endl;
+		Intersection_Of_True_Results(sphere_ref_name_vec,hisat_ref_name_vec);
+	//	std::cout << "sphere and bowtie" << std::endl;
+	//	Intersection_Of_True_Results(sphere_ref_name_vec,bowtie_ref_name_vec);
+	//	std::cout << "sphere and rapmap" << std::endl;
+	//	Intersection_Of_True_Results(sphere_ref_name_vec,rapmap_ref_name_vec);
 	}else if (gate == 7){
 		//ref kmer count:282626422
 		count_ref_kmer("dataset/ref_kmer.txt");
@@ -126,129 +151,6 @@ void count_ref_kmer(std::string filename){
 	}
 	std::cout << "ref kmer count:" << count << std::endl;
 }
-
-//generate reads from transcriptpmes randomly
-void gen_simulate_reads(char* read_name,char* ref_name,singleSeqList *reflist,int read_len){
-	std::ofstream sim_read_file_1;
-	sim_read_file_1.open(read_name);
-
-	read_fastx(ref_name,reflist);
-	int ref_size = reflist->seq.size();
-	int gen_read_per_trans = 100;
-
-	std::string tmp_ref;
-	std::string tmp_ref_name;
-	for (int i = 0; i < ref_size; ++i){
-		tmp_ref.clear();
-		tmp_ref_name.clear();
-		tmp_ref = reflist->seq[i];
-		tmp_ref_name = reflist->name[i];
-		srand(time(NULL));
-		for (int j = 0; j < gen_read_per_trans; ++j){
-			int rand_loc = rand() % (tmp_ref.length() - read_len + 1);
-			std::string aread = tmp_ref.substr(rand_loc,read_len);
-
-			sim_read_file_1 << '@' << j + 1 << ":SIMUALATE:" << tmp_ref_name << std::endl;
-			sim_read_file_1 << aread << std::endl;
-			sim_read_file_1 << '+' << std::endl;
-			sim_read_file_1 << "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII" << std::endl;
-
-			//mismatch
-			int rand_mis;
-			int mis_num = 5;
-			int rand_base = 0;
-			const char* rand_base_str = "0";
-			for (int k = 0; k < mis_num; ++k){
-				rand_mis = rand() % (read_len);
-				while(rand_mis < 5){
-					rand_mis = rand() % (read_len);
-				}
-				rand_base = aread[rand_mis] - 'A' + 1;
-				while((char)rand_base == aread[rand_mis] - 'A' + 1){
-					rand_base = rand() % (3) + 1;
-
-					if (rand_base == 1)
-					{
-						rand_base_str = "A";
-					}else if (rand_base == 2)
-					{
-						rand_base_str = "T";
-					}else if (rand_base == 3)
-					{
-						rand_base_str = "C";
-					}else if (rand_base == 4)
-					{
-						rand_base_str = "G";
-					}
-				}
-				
-				aread.replace(rand_mis,1,rand_base_str);
-
-				//std::cout << aread[rand_mis] << std::endl;
-			}
-
-			sim_read_file_1 << '@' << j + 1 << ":SIMUALATE-M:" << tmp_ref_name << std::endl;
-			sim_read_file_1 << aread << std::endl;
-			sim_read_file_1 << '+' << std::endl;
-			sim_read_file_1 << "IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII"<<std::endl;
-		}
-	}
-	std::cout << "Simulate Reads From Reference Finished." << std::endl;
-	sim_read_file_1.close();
-}
-
-void gen_simulate_reads_From_TXT(int size,int dim){
-	std::string aread;
-	std::ofstream output;
-	std::ifstream input;
-	input.open("dataset/ref238956.txt");
-	output.open("dataset/sim_mis_read_3.txt");
-	for (int i = 0; i < 5000; ++i){
-		int rand_loc = rand() % (size - dim + 1);
-		input.seekg(rand_loc * (dim + 1),std::ios_base::beg);
-		getline(input,aread);
-		
-		output << aread << std::endl;
-		//mismatch
-		int rand_mis;
-		int mis_num = 5;
-		int rand_base;
-		for (int i = 0; i < mis_num; ++i){
-			rand_mis = rand() % (dim);
-			while(rand_mis < 5)
-			{
-				rand_mis = rand() % (dim);
-			}
-			rand_base = rand() % (3) + 1;
-			while((char)rand_base == aread[rand_mis]){
-				rand_base = rand() % (3) + 1;
-			}
-			aread.replace(rand_mis,1, std::to_string(rand_base));
-		}
-
-		//insert
-	/*	aread.insert(5,"3");
-		aread.pop_back();*/
-		output << aread << std::endl;
-	}
-	input.close();
-	output.close();
-}
-
-bool hamming_dis(std::string s1,std::string s2,int dim){
-	int count = 0;
-	for (int i = 0; i < dim; ++i){
-		if (s1[i] != s2[i]){
-			count++;
-		}
-	}
-	if (count >1){
-		return false;
-	}else{
-		return true;
-	}
-}
-
 
 std::vector<std::string> Save_Ref_Of_Read()
 {
@@ -348,7 +250,7 @@ std::vector<std::string> Save_Ref_Of_Read()
         	ref_of_reads.push_back(ref);
         }else
         {
-        	ref.push_back(" ");
+        	ref.push_back("*");
         	ref_of_reads.push_back(ref);
         }
     }
@@ -367,7 +269,7 @@ std::vector<std::string> Save_Ref_Of_Read()
     return error_read_all_vec;
 }
 
-void Analyse(std::vector<std::vector<std::string>> ref_of_reads,std::vector<std::string> true_ref_of_reads,int total,bool flag,std::vector<std::string> error_read_all = std::vector<std::string>(1,"test"))
+void Analyse_Sim_Result(std::vector<std::vector<std::string>> ref_of_reads,std::vector<std::string> true_ref_of_reads,int total,bool flag,std::vector<std::string> error_read_all = std::vector<std::string>(1,"test"))
 {
 	std::vector<std::string> read_name;
     {
@@ -384,32 +286,42 @@ void Analyse(std::vector<std::vector<std::string>> ref_of_reads,std::vector<std:
     {
     	error_read_file.open("analyse/error_read_bowtie.txt");
     }
-	std::vector<std::string> ref;
 	std::vector<std::string> error_read;
-    size_t count = 0;
+	std::vector<std::string> ref;
+    int mapped = 0,error = 0,unmapped  =0;
     int j = 0;
     for (int i = 0; i < ref_of_reads.size(); ++i)
     {
         ref = ref_of_reads[i];
-    //    std::cout << true_ref_of_reads[i] << "-----" << i << std::endl;
         for (j = 0; j < ref.size(); ++j)
         {
-        //	std::cout << ref[j] << std::endl;
+	        if (ref[j] == "*")
+	        {
+	        	unmapped++;
+	        	j = 0;
+	        	break;
+	        }
             if (ref[j].compare(true_ref_of_reads[i]) == 0)
             {
-                count++;
+                mapped++;
+                j = 0;
                 break;
             }
         }
         if (j == ref.size())
         {
-        	error_read_file << read_name[i] << "\n";
+        	error++;
+        //	error_read_file << read_name[i] << "\n";
         	error_read.push_back(read_name[i]);
         }
     }
-    std::cout << "correct mapping count:" << (float)count << std::endl;
+    std::cout << "correct mapped reads:" << (float)mapped << std::endl;
+    std::cout << "incorrect mapped reads:" << (float)error << std::endl;
+    std::cout << "unmapped reads:" << (float)unmapped << std::endl;
     std::cout << "total reads:" << total << std::endl;
-    std::cout << "correct mapping ratio:" << (float)count / total << std::endl;
+    std::cout << "correct mapped ratio:" << (float)mapped / total << std::endl;
+    std::cout << "incorrect mapped ratio:" << (float) error/ total << std::endl;
+    std::cout << "unmapped ratio:" << (float)unmapped / total << std::endl;
 
     std::ofstream unknown_error("analyse/unknown_errors.txt");
     if (error_read_all.size() != 1)
@@ -448,13 +360,13 @@ void Analyse_Result_Spherical()
         cereal::BinaryInputArchive ar(file);
         ar(true_ref_of_reads);
     } 
-    Analyse(ref_of_reads,true_ref_of_reads,true_ref_of_reads.size(),true,error_read_all_vec) ;
+    Analyse_Sim_Result(ref_of_reads,true_ref_of_reads,true_ref_of_reads.size(),true,error_read_all_vec) ;
 }
 
-void Analyse_Result_Others()
+void Analyse_Result(std::string filename,bool flag,std::vector<std::vector<std::string>> &ref_of_reads,int size)
 {
-//	std::ifstream sam("../bowtie2_res/bowtie2_res.sam");
-	std::ifstream sam("res/res.sam");
+	std::ifstream sam(filename);
+//	std::ifstream sam("res/res.sam");
 	char tmp;
 	std::string line;
 	sam.get(tmp);
@@ -469,7 +381,7 @@ void Analyse_Result_Others()
 	std::string read_name;
 	std::string last_read_name;
 	std::vector<std::string> ref_name_vec;
-	std::vector<std::vector<std::string>> ref_of_reads;
+	
 
 	std::string true_ref_name;
 	std::vector<std::string> true_ref_of_reads;
@@ -480,7 +392,7 @@ void Analyse_Result_Others()
 	count++;
 	std::stringstream ss(line);
 	ss >> read_name >> str >> ref_name;
-	ref_name = ref_name.substr(0,15);
+	ref_name = ref_name.substr(0,ref_name.find_first_of("."));
 	last_read_name = read_name;
 	while(sam.peek() != EOF)
 	{
@@ -498,8 +410,12 @@ void Analyse_Result_Others()
 
 			last_read_name = last_read_name.substr(last_read_name.find_first_of(":") + 1,last_read_name.size());
 			last_read_name = last_read_name.substr(last_read_name.find_first_of(":") + 1,last_read_name.size());
-			true_ref_name = last_read_name.substr(0,last_read_name.find_first_of(":"));
-			true_ref_of_reads.push_back(true_ref_name);
+			
+			if (!flag)
+			{
+				true_ref_name = last_read_name.substr(0,last_read_name.find_first_of(":"));
+				true_ref_of_reads.push_back(true_ref_name);
+			}
 		}
 			
 		last_read_name = read_name;
@@ -510,5 +426,74 @@ void Analyse_Result_Others()
 		ss >> read_name >> str >> ref_name;
 		ref_name = ref_name.substr(0,15);
 	}
-	Analyse(ref_of_reads,true_ref_of_reads,20748,false);
+	std::cout << filename << std::endl;
+	if (!flag)
+	{
+		Analyse_Sim_Result(ref_of_reads,true_ref_of_reads,size,false);
+	}else
+	{
+		Analyse_True_Result(ref_of_reads);
+	}
+}
+
+void Analyse_True_Result(std::vector<std::vector<std::string>> ref_of_reads)
+{
+    int mapped = 0,error = 0,unmapped  =0;
+    int read_size = ref_of_reads.size();
+    for (int i = 0; i < read_size; ++i)
+    {
+        if (ref_of_reads[i][0] == "*")
+        {
+        	unmapped++;
+        }else
+        {
+        	mapped++;
+        }
+    }
+    std::cout << "total reads:" << read_size << std::endl;
+    std::cout << "unmapped reads:" << unmapped  << "\t" << (float)unmapped / read_size << std::endl;
+    std::cout << "mapped reads:" << mapped << "\t" << (float)mapped / read_size << std::endl << std::endl;
+}
+
+void Intersection_Of_True_Results(std::vector<std::vector<std::string>> ref_of_reads_1,std::vector<std::vector<std::string>> ref_of_reads_2)
+{
+	std::vector<std::string> ref_1,ref_2;
+	int count = 0;
+	bool flag = true;
+	int read_size = ref_of_reads_1.size();
+	int j = 0;
+	for (int i = 0; i < read_size; ++i)
+	{
+		ref_1 = ref_of_reads_1[i];
+		ref_2 = ref_of_reads_2[i];
+		if (ref_1.size() == ref_2.size() && ref_1[0] != "*" && ref_2[0] != "*")
+		{
+			for (int i = 0; i < ref_1.size(); ++i)
+			{
+				for (j = 0; j < ref_2.size(); ++j)
+				{
+					if (ref_1[i].compare(ref_2[j]) == 0)
+					{
+						flag = flag && true;
+						j = 0;
+						break;
+					}
+				}
+				if (j == ref_2.size() - 1)
+				{
+					flag = flag && false;
+					break;
+				}
+			}
+			if (flag)
+			{
+				count++;
+			//	std::cout << "2" << std::endl;
+			}else
+			{
+				flag = true;
+			}
+		}
+	}
+	std::cout << "the same mapping ratio of them:" << count << "\t" <<(float)count / read_size << std::endl;
 }
