@@ -102,7 +102,7 @@ static constexpr char itoic_table[80] = {
         48, 0,  50, 0,  52,  0,  54, 0,  56, 57
 };
 
-static int filter = floor((float)exp((float)(BCODE_LEN / 10)) / 3);
+static int filter = 2;//floor((float)exp((float)(BCODE_LEN / 10)) / 3);
 
 class SArray
 {
@@ -146,7 +146,7 @@ struct region_profile
 
 struct mapped_res
 {
-    std::vector<int> min_code_idx;
+    std::vector<std::vector<int>> min_code_idx;
     std::vector<int> min_dis;
 
     template<class Archive>

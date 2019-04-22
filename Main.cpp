@@ -58,8 +58,13 @@ int main(int argc, char const *argv[])
 
 		map->Hash_Mapping_with_SA();
 
-	/* 	SAMwriter *sp = new SAMwriter(DIM); 
-	 	sp->Transfer_Info_From_Mapping(map->is_read_1_rev,map->is_read_2_rev,map->read_1_buff.d,map->read_2_buff.d,map->rpro);
+	/*	map->Load_Ref_Info();
+		map->Output_Result(PAIR_1);
+		map->Output_Result(PAIR_2);*/
+		T0.Stop();
+
+	 	SAMwriter *sp = new SAMwriter(DIM); 
+	 	sp->Transfer_Info_From_Mapping(map->is_read_1_rev,map->is_read_2_rev,map->rpro,map->read_1_buff.d,map->read_2_buff.d);
 	 	delete map;
 
 	 	sp->Load_Info();
@@ -68,11 +73,7 @@ int main(int argc, char const *argv[])
 		T2.Reset();     T2.Start();
 	    sp->Generate_SAM();
 	    T2.Stop();
-	    printf("- Generate SAM File Finished (%f seconds)\n",T2.GetTime());*/
-		map->Load_Ref_Info();
-		map->Output_Result(PAIR_1);
-		map->Output_Result(PAIR_2);
-		T0.Stop();
+	    printf("- Generate SAM File Finished (%f seconds)\n",T2.GetTime());
 		printf("- Total Running Time (%f seconds)\n",T0.GetTime() );
 	}
 		

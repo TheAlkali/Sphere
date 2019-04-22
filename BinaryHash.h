@@ -70,17 +70,23 @@ public :
 	void ReleaseMem();
 
 	template<typename ArgType>
-	__inline void Compute_BCode(ArgType *x, bitset<BCODE_LEN> &y)
+	__inline void Compute_BCode(ArgType *x, bitset<BCODE_LEN> &y,bool is_read)
 	{
-
-		int start = KMER_SIZE;
+		int start;
+		if (is_read)
+		{
+			start = KMER_SIZE + SKIP;	
+		}else
+		{
+			start = KMER_SIZE;
+		}
 	#ifdef USE_PARALLELIZATION
 		#pragma omp parallel for
 	#endif
 		for(int i=0;i<BCODE_LEN;i++)
 		{
 			ArgType dis = Compute_Distance_L2Sq<REAL_TYPE>( s[i].c , x , dim , start);
-			if( dis - s[i].rSq >0.0001)
+			if( dis - s[i].rSq >0.000001)
 			{
 				y[i] = 0;
 			}

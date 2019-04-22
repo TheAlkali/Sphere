@@ -7,10 +7,10 @@
 #define KNN						5
 
 // binary code length
-#define BCODE_LEN				30		
+#define BCODE_LEN				16		
 
 // number of training samples for spherical hashing
-#define NUM_TRAIN_SAMPLES		2000
+#define NUM_TRAIN_SAMPLES		10000
 
 // desired portion of training set inside of one hyper-sphere
 #define INCLUDING_RATIO			0.5
@@ -31,8 +31,8 @@
 #define TRANSCRIPTS_FILE_NAME	"../reference/transcripts/Homo_sapiens.GRCh38.cdna.all.fa"//"dataset/rapmap_transcripts.fasta"
 #define TRANSCRIPTS_STRING_FILE "dataset/srrdata/true_ref_seq.txt"//"dataset/all_ref_seq.txt"
 
-#define RAW_READ_FILE_1			"dataset/srrdata/sim_read_1.fastq"
-#define RAW_READ_FILE_2			"dataset/srrdata/sim_read_2.fastq"
+#define RAW_READ_FILE_1			"dataset/srrdata/SRR5337025_clean_1.fastq"
+#define RAW_READ_FILE_2			"dataset/srrdata/SRR5337025_clean_2.fastq"
 
 #define INPUT_READ_FILE_NAME_1	"dataset/srrdata/small_srr25_1.txt"//"dataset/sim_mis_read_5_1.txt"
 #define INPUT_READ_FILE_NAME_2	"dataset/srrdata/small_srr25_2.txt"//"dataset/sim_mis_read_5_2.txt"
@@ -45,7 +45,7 @@
 #define REDUCED_REGION_CODE_BUCKET_FILE	"bin/code_bucket.bin"
 #define REDUCED_REGION_INFO_FILE		"bin/reduced_region_info.bin"
 
-#define DIM						76
+#define DIM						50
 #define SAM_FILE_LOC			"res/res.sam"
 
 #define PAIR_1 					1
@@ -70,7 +70,8 @@
 
 #define CODE_BUFFER_SIZE		200000	//
 //#define READ_BUFFER_SIZE		1000
-#define KMER_SIZE				11	
+#define KMER_SIZE				10	
+#define SKIP					5
 #define TOLERANCE				7
 
 // to disable parallelization, comment out this
