@@ -5,6 +5,7 @@
 //#include "Common.h"
 #include "Utils.hpp"
 #include "MemoryMapped.h"
+#include "Common.h"
 
 class Points
 {
@@ -12,20 +13,22 @@ public :
 	int nP;
 	int dim;
 	REAL_TYPE **d;
-	std::ifstream srcfile;
-	enum point_type
+	MemoryMapped all_reads;
+
+	void A_Read(int i,REAL_TYPE *read)
 	{
-		training,
-		region,
-		mapping
-	};
+		for (int j = 0; j < dim; ++j)
+		{
+			read[j] = d[i][j];
+		//	read[j] = ictoi_table[all_reads[i * (dim + 1) + j]];
+		}
+	}
 
-
-	void Initialize_MemoryMapped(std::string filename,point_type type)
+	void Initialize_MemoryMapped(std::string filename )
 	{
 		
 		MemoryMapped reads_file(filename);
-		for (int i = 0; i < nP; ++i)
+	/*	for (int i = 0; i < nP; ++i)
 		{
 			for (int j = 0; j < dim; ++j)
 			{
@@ -34,7 +37,7 @@ public :
 			}
 		//	std::cout << std::endl;
 		}
-		reads_file.close();
+		reads_file.close();*/
 	}
 
 	void Initialize(int _nP, int _dim)
@@ -54,11 +57,24 @@ public :
 	// v0 (floats, number of elements is equal to dimensionality)
 	// v1
 	// ...
-	int Initialize_From_File()
+	void Initialize_From_File(std::string filename, int num = 0)
 	{
+		std::ifstream srcfile(filename);
 		std::string tmp;
-		int i;
-		for(i=0;i < nP;i++)
+		if (!srcfile.is_open())
+		{
+			perror(INPUT_REF_FILE_NAME);
+			exit(EXIT_FAILURE);
+		}
+		int cond = 0;
+		if (num != 0)
+		{
+			cond = num;
+		}else
+		{
+			cond = nP;
+		}
+		for(int i=0;i < cond;i++)
 		{
 			std::getline(srcfile,tmp);
 			for(int k=0;k<dim;k++)
@@ -68,12 +84,6 @@ public :
 			}
 		//	std::cout << std::endl;
 		}
-		if (srcfile.peek() == EOF)
-		{
-			srcfile.close();
-			return i;
-		}
-		return -1;
 	}
 
 	// computing center of points for zero centering
@@ -98,12 +108,7 @@ public :
 
 	void ReleaseMem()
 	{
-		for(int i=0;i<nP;i++)
-		{
-			delete [] d[i];
-		}
-
-		delete [] d;
+		all_reads.close();
 	}
 
 	

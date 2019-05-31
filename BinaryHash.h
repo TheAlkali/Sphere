@@ -83,10 +83,10 @@ public :
 	#ifdef USE_PARALLELIZATION
 		#pragma omp parallel for
 	#endif
-		for(int i=0;i<BCODE_LEN;i++)
+		for(int i = 0;i < code_len;i++)
 		{
 			ArgType dis = Compute_Distance_L2Sq<REAL_TYPE>( s[i].c , x , dim , start);
-			if( dis - s[i].rSq >0.000001)
+			if( dis - s[i].rSq > 0.000001)
 			{
 				y[i] = 0;
 			}
@@ -94,10 +94,11 @@ public :
 			{
 				y[i] = 1;
 			}
-			//std::cout << dis << " " << s[i].rSq << " " << y[i] << std::endl;
-			start += dim;
+		//	std::cout << dis << " " << s[i].rSq << " " << y[i] << std::endl;
+		//	start += dim;
+			start += 1;
 		}
-	//	std::cout << y << std::endl<< std::endl;
+	//	std::cout << y << std::endl;
 	}
 
 	void Save_Sphere_Info()

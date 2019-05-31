@@ -3,6 +3,8 @@
 #include<time.h>
 #include <algorithm>
 //#include"kmerUtils.hpp"
+#include "Points.h"
+#include "Common.h"
 #include"fastxParser.hpp"
 #include"SAMparser.hpp"
 #include "Utils.hpp"
@@ -13,7 +15,10 @@ void Analyse_Result_Spherical();
 void count_ref_kmer(std::string);
 void Analyse_Result(std::string,bool flag,std::vector<std::vector<std::string>>&,int);
 void Analyse_True_Result(std::vector<std::vector<std::string>>);
-void Intersection_Of_True_Results(std::vector<std::vector<std::string>>,std::vector<std::vector<std::string>>);
+void Intersection_Of_Two_Results(std::vector<std::vector<std::string>>,std::vector<std::vector<std::string>>);
+void Intersection_Of_Three_Results(std::vector<std::vector<std::string>>,std::vector<std::vector<std::string>>,std::vector<std::vector<std::string>>);
+void Intersection_Of_Four_Results(std::vector<std::vector<std::string>>,std::vector<std::vector<std::string>>,
+								std::vector<std::vector<std::string>>,std::vector<std::vector<std::string>>);
 void analyse_tid();
 void rand_prob();
 void difference_of_error(std::string,std::string);
@@ -23,9 +28,9 @@ int main(int argc, char const *argv[])
 //int main()
 {
 //	kmerUtils kmutil;
-	int klen = 100;
+	int klen = 50;
 //	LSH lsh;
-	int gate = std::atoi(argv[1]);
+	int gate = 6;//std::atoi(argv[1]);
 
 	char ref[] = "../reference/transcripts/Homo_sapiens.GRCh38.cdna.all.fa";
 	char read1[] = "dataset/srrdata/SRR5337025_1.fastq";//"dataset/rapmap_reads_1.fastq";
@@ -41,11 +46,11 @@ int main(int argc, char const *argv[])
 	if (gate == 0){		
 		//extract the mapping results of each aread to disk
 		SAMparser  sp;
-		char test_sam[] = "../rapmap_res/rapmap_res.sam";
-		char test_res[] = "rapmap_res.txt";
-		sp.get_Sam(ref,test_sam,test_res,2522231,klen);
+		char test_sam[] = "res/res.sam";//"../rapmap_res/rapmap_res.sam";
+		char test_res[] = "sphere_res.txt";
+		sp.get_Sam(ref,test_sam,test_res,2922261,klen);
 	}else if (gate == 1){		
-		store_reads();
+	//	store_reads();
 //		store_reads("../reads/single-cell-data/SRR5337/Simulate_GRCh38.1.fa",klen);
 //		store_ref_kmers(ref,klen);
 	}else if (gate == 2)
@@ -72,27 +77,49 @@ int main(int argc, char const *argv[])
 	//	Analyse_Result("../hisat2_res/hisat2_res.sam",false,hisat_ref_name_vec,2250009);
 	//	Analyse_Result("../bowtie2_res/bowtie2_res.sam",false,bowtie_ref_name_vec,2522231);
 	//	Analyse_Result("../rapmap_res/rapmap_res.sam",false,rapmap_ref_name_vec,2081302);
-		Analyse_Result("res/res.sam",false,sphere_ref_name_vec,2081302);
+		Analyse_Result("res/res.sam",false,sphere_ref_name_vec,2522231);
 	}else if (gate == 6){
 		std::vector<std::vector<std::string>> bowtie_ref_name_vec;
 		std::vector<std::vector<std::string>> hisat_ref_name_vec;
 		std::vector<std::vector<std::string>> rapmap_ref_name_vec;
 		std::vector<std::vector<std::string>> sphere_ref_name_vec;
 	//	Analyse_Result_Spherical();
+		std::cout << "SRR534302_res" << std::endl;
+		Analyse_Result("../hisat2_res/SRR534302_res.sam",true,hisat_ref_name_vec,0);
+		std::cout << "analyse hsiat2 finished" << std::endl;
+		Analyse_Result("../bowtie2_res/SRR534302_res.sam",true,bowtie_ref_name_vec,0);
+		std::cout << "analyse bowtie2 finished" << std::endl;
+		Analyse_Result("../rapmap_res/SRR534302_res.sam",true,rapmap_ref_name_vec,0);
+		std::cout << "analyse rapmap finished" << std::endl;
+		Analyse_Result("res/SRR534302_res.sam",true,sphere_ref_name_vec,0);
+		std::cout << "analyse bit-mapping finished" << std::endl;
 
-	//	Analyse_Result("../hisat2_res/true_hisat2_res.sam",true,hisat_ref_name_vec,4466456);
-	//	Analyse_Result("../bowtie2_res/true_bowtie2_res.sam",true,bowtie_ref_name_vec,4466456);
-		Analyse_Result("../rapmap_res/true_rapmap_res.sam",true,rapmap_ref_name_vec,4466456);
-	//	Analyse_Result("res/res.sam",true,sphere_ref_name_vec,4466456);
+		std::cout << "hisat2 and rapmap" << std::endl;
+		Intersection_Of_Two_Results(rapmap_ref_name_vec,hisat_ref_name_vec);
+		std::cout << "hisat2 and bowtie2" <<  "\t" << bowtie_ref_name_vec.size() << "\t" <<  hisat_ref_name_vec.size() << std::endl;
+		Intersection_Of_Two_Results(bowtie_ref_name_vec,hisat_ref_name_vec);
 
-	//	std::cout << "bowtie2 and hisat2" << std::endl;
-	//	Intersection_Of_True_Results(bowtie_ref_name_vec,hisat_ref_name_vec);
-	//	std::cout << "sphere and hisat" << std::endl;
-	//	Intersection_Of_True_Results(sphere_ref_name_vec,hisat_ref_name_vec);
-	//	std::cout << "sphere and bowtie" << std::endl;
-	//	Intersection_Of_True_Results(sphere_ref_name_vec,bowtie_ref_name_vec);
-	//	std::cout << "sphere and rapmap" << std::endl;
-	//	Intersection_Of_True_Results(sphere_ref_name_vec,rapmap_ref_name_vec);
+		std::cout << "rapmap and bowtie2" << std::endl;
+		Intersection_Of_Two_Results(bowtie_ref_name_vec,rapmap_ref_name_vec);
+
+		std::cout << "sphere and hisat2" << sphere_ref_name_vec.size() << hisat_ref_name_vec.size() << std::endl;
+		Intersection_Of_Two_Results(sphere_ref_name_vec,hisat_ref_name_vec);
+		std::cout << "sphere and bowtie" << "\t" << sphere_ref_name_vec.size() << "\t" << bowtie_ref_name_vec.size() << std::endl;
+		Intersection_Of_Two_Results(sphere_ref_name_vec,bowtie_ref_name_vec);
+		std::cout << "sphere and rapmap" << std::endl;
+		Intersection_Of_Two_Results(sphere_ref_name_vec,rapmap_ref_name_vec);
+
+		std::cout << "sphere, rapmap and bowtie2" << std::endl;
+		Intersection_Of_Three_Results(sphere_ref_name_vec,rapmap_ref_name_vec,bowtie_ref_name_vec);
+		std::cout << "sphere, rapmap and hisat2" << std::endl;
+		Intersection_Of_Three_Results(sphere_ref_name_vec,rapmap_ref_name_vec,hisat_ref_name_vec);
+		std::cout << "sphere, hisat and bowtie2" << std::endl;
+		Intersection_Of_Three_Results(sphere_ref_name_vec,hisat_ref_name_vec,bowtie_ref_name_vec);
+		std::cout << "hisat, rapmap and bowtie2" << std::endl;
+		Intersection_Of_Three_Results(hisat_ref_name_vec,rapmap_ref_name_vec,bowtie_ref_name_vec);
+
+		std::cout << "hisat, rapmap, hisat2 and bowtie2" << std::endl;
+		Intersection_Of_Four_Results(hisat_ref_name_vec,rapmap_ref_name_vec,bowtie_ref_name_vec,sphere_ref_name_vec);
 	}else if (gate == 7){
 		//ref kmer count:282626422
 		count_ref_kmer("dataset/ref_kmer.txt");
@@ -425,11 +452,13 @@ void Analyse_Result(std::string filename,bool flag,std::vector<std::vector<std::
 //	ss >> read_name;
 //	ref_name = read_name.substr(0,ref_name.find_first_of("-"));
 	last_read_name = read_name;
+	int read_size = 0;
 	while(sam.peek() != EOF)
 	{
 		if(read_name.compare(last_read_name) == 0)
 		{
 			ref_name_vec.push_back(ref_name);
+			read_size++;
 		//	std::cout << ref_name << std::endl;
 		}else
 		{
@@ -475,6 +504,9 @@ void Analyse_True_Result(std::vector<std::vector<std::string>> ref_of_reads)
 {
     int mapped = 0,error = 0,unmapped  =0;
     int read_size = ref_of_reads.size();
+#ifdef USE_PARALLELIZATION
+    #pragma omp parallel for reduction(+:mapped,unmapped) num_threads(THREAD)
+#endif
     for (int i = 0; i < read_size; ++i)
     {
         if (ref_of_reads[i][0] == "*")
@@ -490,44 +522,134 @@ void Analyse_True_Result(std::vector<std::vector<std::string>> ref_of_reads)
     std::cout << "mapped reads:" << mapped << "\t" << (float)mapped / read_size << std::endl << std::endl;
 }
 
-void Intersection_Of_True_Results(std::vector<std::vector<std::string>> ref_of_reads_1,std::vector<std::vector<std::string>> ref_of_reads_2)
+void Intersection_Of_Two_Results(std::vector<std::vector<std::string>> ref_of_reads_1,std::vector<std::vector<std::string>> ref_of_reads_2)
 {
 	std::vector<std::string> ref_1,ref_2;
 	int count = 0;
 	bool flag = true;
 	int read_size = ref_of_reads_1.size();
 	int j = 0;
+#ifdef USE_PARALLELIZATION
+    #pragma omp parallel for private(ref_1,ref_2) reduction(+:count) num_threads(THREAD)
+#endif
 	for (int i = 0; i < read_size; ++i)
 	{
 		ref_1 = ref_of_reads_1[i];
 		ref_2 = ref_of_reads_2[i];
 		if (ref_1.size() == ref_2.size() && ref_1[0] != "*" && ref_2[0] != "*")
 		{
+		/*	std::cout << i << std::endl;
 			for (int i = 0; i < ref_1.size(); ++i)
 			{
-				for (j = 0; j < ref_2.size(); ++j)
+				std::cout << ref_1[i] << std::endl;
+			}
+			std::cout << std::endl;
+			for (int i = 0; i < ref_2.size(); ++i)
+			{
+				std::cout << ref_2[i] << std::endl;
+			}*/
+			sort(ref_1.begin(),ref_1.end());
+			sort(ref_2.begin(),ref_2.end());
+			for (int i = 0; i < ref_1.size(); ++i)
+			{
+				if (ref_1[i].compare(ref_2[i]) != 0)
 				{
-					if (ref_1[i].compare(ref_2[j]) == 0)
-					{
-						flag = flag && true;
-						j = 0;
-						break;
-					}
-				}
-				if (j == ref_2.size() - 1)
-				{
-					flag = flag && false;
+					flag = false;
 					break;
 				}
 			}
 			if (flag)
 			{
 				count++;
-			//	std::cout << "2" << std::endl;
-			}else
-			{
-				flag = true;
 			}
+			flag = true;
+		}
+	}
+	std::cout << "the same mapping ratio of them:" << count << "\t" <<(float)count / read_size << std::endl;
+}
+
+void Intersection_Of_Three_Results(std::vector<std::vector<std::string>> ref_of_reads_1,std::vector<std::vector<std::string>> ref_of_reads_2
+								,std::vector<std::vector<std::string>> ref_of_reads_3)
+{
+	std::vector<std::string> ref_1,ref_2,ref_3;
+	int count = 0;
+	bool flag = true;
+	int read_size = ref_of_reads_1.size();
+	int j = 0;
+#ifdef USE_PARALLELIZATION
+    #pragma omp parallel for private(ref_1,ref_2,ref_3) reduction(+:count) num_threads(THREAD)
+#endif
+	for (int i = 0; i < read_size; ++i)
+	{
+		ref_1 = ref_of_reads_1[i];
+		ref_2 = ref_of_reads_2[i];
+		ref_3 = ref_of_reads_3[i];
+		if (ref_1.size() == ref_2.size() && ref_1.size() == ref_3.size() && ref_1[0] != "*" && ref_2[0] != "*" && ref_3[0] != "*")
+		{
+			sort(ref_1.begin(),ref_1.end());
+			sort(ref_2.begin(),ref_2.end());
+			sort(ref_3.begin(),ref_3.end());
+			for (int i = 0; i < ref_1.size(); ++i)
+			{
+				if (ref_1[i].compare(ref_2[i]) == 0 && ref_1[i].compare(ref_3[i]) == 0 && ref_2[i].compare(ref_3[i]) == 0)
+				{
+					continue;
+				}else
+				{
+					flag = false;
+					break;
+				}
+			}
+			if (flag)
+			{
+				count++;
+			}
+			flag = true;
+		}
+	}
+	std::cout << "the same mapping ratio of them:" << count << "\t" <<(float)count / read_size << std::endl;
+}
+
+void Intersection_Of_Four_Results(std::vector<std::vector<std::string>> ref_of_reads_1,std::vector<std::vector<std::string>> ref_of_reads_2
+								,std::vector<std::vector<std::string>> ref_of_reads_3,std::vector<std::vector<std::string>> ref_of_reads_4)
+{
+	std::vector<std::string> ref_1,ref_2,ref_3,ref_4;
+	int count = 0;
+	bool flag = true;
+	int read_size = ref_of_reads_1.size();
+	int j = 0;
+#ifdef USE_PARALLELIZATION
+    #pragma omp parallel for private(ref_1,ref_2,ref_3,ref_4) reduction(+:count) num_threads(THREAD)
+#endif
+	for (int i = 0; i < read_size; ++i)
+	{
+		ref_1 = ref_of_reads_1[i];
+		ref_2 = ref_of_reads_2[i];
+		ref_3 = ref_of_reads_3[i];
+		ref_4 = ref_of_reads_4[i];
+		if (ref_1.size() == ref_2.size() && ref_1.size() == ref_3.size()  && ref_1.size() == ref_4.size() && ref_1[0] != "*" && ref_2[0] != "*" && ref_3[0] != "*"
+			 && ref_4[0] != "*")
+		{
+			sort(ref_1.begin(),ref_1.end());
+			sort(ref_2.begin(),ref_2.end());
+			sort(ref_3.begin(),ref_3.end());
+			sort(ref_4.begin(),ref_4.end());
+			for (int i = 0; i < ref_1.size(); ++i)
+			{
+				if (ref_1[i].compare(ref_2[i]) == 0 && ref_1[i].compare(ref_3[i]) == 0 && ref_1[i].compare(ref_4[i]) == 0)
+				{
+					continue;
+				}else
+				{
+					flag = false;
+					break;
+				}
+			}
+			if (flag)
+			{
+				count++;
+			}
+			flag = true;
 		}
 	}
 	std::cout << "the same mapping ratio of them:" << count << "\t" <<(float)count / read_size << std::endl;

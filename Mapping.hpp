@@ -70,70 +70,24 @@ private:
 
 public:
     //-------- preserve after mapping------
-    Points read_1_buff;
-    Points read_2_buff;
 
     std::vector<bool> is_read_1_rev;
     std::vector<bool> is_read_2_rev;
-    region_profile rpro;
+    region_profile *rpro;
 
     int read_size;
     int dim;
-
-    Mapping(int rdim)
+    Mapping(int dim)
     {
-        dim = rdim; 
+        this->dim = dim; 
+    }
+
+    Mapping(int dim,region_profile &rpro)
+    {
+        this->dim = dim; 
+        this->rpro = &rpro;
     }
     ~Mapping(){};
-
-/*    void Release_Content()
-    {
-        region_kmer.~vector();
-        ref_of_read_1.~vector();
-        ref_of_read_2.~vector();
-        rcode_of_read_1.~vector();
-        rcode_of_read_2.~vector();
-        ref_name.~vector();
-        loc_to_ref.~vector();
-        ref_string.~string();
-        sarry.~SArray();
-        src_sh.~SphericalHashing();
-        std::cout << "- Release Mapping Content Finished" << std::endl;
-    }*/
-
-// --------friend func of SAMwriter--------------
-    std::string Get_Read_1_Buff(int idx)
-    {
-        std::string read;
-        read.resize(dim);
-        for (int i = 0; i < dim; ++i)
-        {
-            read[i] = itos_table[(int8_t)read_1_buff.d[idx][i] ];
-        }
-        return read;
-    }
-
-    std::string Get_Read_2_Buff(int idx)
-    {
-        std::string read;
-        read.resize(dim);
-        for (int i = 0; i < dim; ++i)
-        {
-            read[i] = itos_table[(int8_t)read_2_buff.d[idx][i]];
-        }
-        return read;
-    }
-
-    bool Get_Is_Read_1_Rev(int idx)
-    {
-        return is_read_1_rev[idx];
-    }
-
-    bool Get_Is_Read_2_Rev(int idx)
-    {
-        return is_read_2_rev[idx];
-    }
-//------------------------------------------------
 
     void Learn_Spherical_Hashing(Points &buff,int code_len,int seg_len)
     {
@@ -171,9 +125,9 @@ public:
         int ref_buffer_count = 0;
         bitset<BCODE_LEN> bCodeRef;
         REAL_TYPE *seq = new REAL_TYPE[dim];
-        for (int i = 0; i < rpro.region_start_idx.size(); ++i)
+        for (int i = 0; i < rpro->region_start_idx.size(); ++i)
         {   
-            for (size_t j = rpro.region_start_idx[i]; j < rpro.region_end_idx[i]; ++j)
+            for (size_t j = rpro->region_start_idx[i]; j < rpro->region_end_idx[i]; ++j)
             {
                 //if buffer is full, store ref codes to disk
                 if (ref_buffer_count == buffer_size)
@@ -187,12 +141,12 @@ public:
                     seq[k] = ictoi_table[ref_string[sarry.con[j] + k]];
                 }
                 src_sh.Compute_BCode<REAL_TYPE>(seq,bCodeRef,false);
-            //    std::cout << bCodeRef << std::endl;
+            //    std::cout << bCodeRef << std::endl << std::endl;
                 bCodeRef_vec[ref_buffer_count] = bCodeRef.to_ulong();         
                 ref_buffer_count++;
                
             }
-            loc_in_file += rpro.region_end_idx[i] - rpro.region_start_idx[i];
+            loc_in_file += rpro->region_end_idx[i] - rpro->region_start_idx[i];
  
         }
         bCodeRef_file.close();    
@@ -220,15 +174,13 @@ public:
 
         std::vector<size_t> loc_tmp;
         size_t region_start = 0;
-
-
-        for (int i = 0; i < rpro.region_start_idx.size() - 1; ++i)
+        for (int i = 0; i < rpro->region_start_idx.size() - 1; ++i)
         {
-            region_size = rpro.region_end_idx[i] - rpro.region_start_idx[i];
-        //    std::cout <<rpro.region_end_idx[i] << "\t"<< rpro.region_start_idx[i]<< "\t"<< region_size << std::endl;
+            region_size = rpro->region_end_idx[i] - rpro->region_start_idx[i];
+        //    std::cout <<rpro->region_end_idx[i] << "\t"<< rpro->region_start_idx[i]<< "\t"<< region_size << std::endl;
             bCodeRef_vec.resize(region_size);
             bCodeRef_file.clear();
-            bCodeRef_file.seekg(rpro.region_start_idx[i] * sizeof(unsigned long),bCodeRef_file.beg);
+            bCodeRef_file.seekg(rpro->region_start_idx[i] * sizeof(unsigned long),bCodeRef_file.beg);
             bCodeRef_file.read(reinterpret_cast<char*>(&bCodeRef_vec[0]),region_size * sizeof(unsigned long));
 
             //find the max element in vec
@@ -250,11 +202,12 @@ public:
                     unique_size++;
                     reduced_code_bucket.resize(unique_size);
                 }
-                reduced_code_bucket[loc_in_bucket[bCodeRef_vec[j]]].push_back(sarry.con[rpro.region_start_idx[i] + j]);
+                reduced_code_bucket[loc_in_bucket[bCodeRef_vec[j]]].push_back(sarry.con[rpro->region_start_idx[i] + j]);
             }
-            rpro.region_start_idx[i] = region_start;
+
+            rpro->region_start_idx[i] = region_start;
             region_start += unique_size;
-            rpro.region_end_idx[i] = region_start;
+            rpro->region_end_idx[i] = region_start;
 
             // save unique ref code to file
             irinfo_file.write(reinterpret_cast<const char*>(&reduced_region_code[0]),unique_size * sizeof(unsigned long));
@@ -270,7 +223,7 @@ public:
                 bucket_idx += reduced_code_bucket[loc_in_bucket[reduced_region_code[j]]].size();
             }
 
-            rpro.code_bucket_idx.push_back(each_bucket_idx);
+            rpro->code_bucket_idx.push_back(each_bucket_idx);
             each_bucket_idx.clear();
         }
         irinfo_file.close();
@@ -297,7 +250,7 @@ public:
         {
             std::ifstream region_file("sa/ref_suffix_region.bin");
             cereal::BinaryInputArchive ar(region_file);
-            ar(rpro.rkmer_idx,rpro.region_start_idx,rpro.region_end_idx,rpro.code_bucket_idx);
+            ar(rpro->rkmer_idx,rpro->region_start_idx,rpro->region_end_idx,rpro->code_bucket_idx);
         }
 
         {
@@ -306,16 +259,16 @@ public:
             ar(region_kmer);
         }
 
-    /*    {
+        {
             std::ifstream ref_string_file(MERGE_REF_SEQ_FILE);
             cereal::BinaryInputArchive ar(ref_string_file);
             ar(ref_string);
-        }*/
+        }
         T0.Stop();
         printf("- Load Suffix Array Region Finished (%f seconds)\n",T0.GetTime());   
     //-----------------------------------
         std::string tmp = TRANSCRIPTS_FILE_NAME;
-        ref_string = merge_ref_seq(strdup(tmp.c_str()),seg_len); 
+    //    ref_string = merge_ref_seq(strdup(tmp.c_str()),seg_len); 
 
         T0.Reset();     T0.Start();
 
@@ -340,9 +293,9 @@ public:
         int tmp_size = 0;
         std::vector<int> bucket(82653,0);
         std::ofstream tmp_file("region_size_analysis.txt");
-        for (int i = 0; i < rpro.region_start_idx.size() - 1; ++i)
+        for (int i = 0; i < rpro->region_start_idx.size() - 1; ++i)
         {   
-            tmp_size = rpro.region_end_idx[i] - rpro.region_start_idx[i];
+            tmp_size = rpro->region_end_idx[i] - rpro->region_start_idx[i];
             bucket[tmp_size] = bucket[tmp_size] + 1;
         }
         for (int i = 0; i < 82653; ++i)
@@ -416,13 +369,13 @@ public:
            {
                 if (last_kmer != kmer && !start)
                 {
-                    rpro.region_start_idx.push_back(i);
+                    rpro->region_start_idx.push_back(i);
                     region_kmer.push_back(kmer);
                     start = true;
                 }else if (last_kmer != kmer && start)
                 {
-                    rpro.region_end_idx.push_back(i);
-                    rpro.region_start_idx.push_back(i);
+                    rpro->region_end_idx.push_back(i);
+                    rpro->region_start_idx.push_back(i);
                     region_kmer.push_back(kmer);
                 }
                 last_kmer = kmer;
@@ -454,18 +407,18 @@ public:
         printf("- Starting To Search Region ...\n");
         uint64_t idx;
         uint64_t max_idx = 0;
-        for (unsigned int i = 0; i < rpro.region_start_idx.size(); ++i)
+        for (unsigned int i = 0; i < rpro->region_start_idx.size(); ++i)
         {
             idx = sa_bphf->lookup(region_kmer[i]);
             if (idx > max_idx)
             {
                 max_idx = idx;
             }
-            region_file << rpro.region_start_idx[i] << "\t" << rpro.region_end_idx[i] << "\t" << region_kmer[i] << "\t" << idx << std::endl;
-            rpro.rkmer_idx.push_back(idx);
+            region_file << rpro->region_start_idx[i] << "\t" << rpro->region_end_idx[i] << "\t" << region_kmer[i] << "\t" << idx << std::endl;
+            rpro->rkmer_idx.push_back(idx);
         }
         std::vector<size_t> region_bphf_idx(max_idx + 1);
-        for (int i = 0; i < rpro.region_start_idx.size(); ++i)
+        for (int i = 0; i < rpro->region_start_idx.size(); ++i)
         {
             idx = sa_bphf->lookup(region_kmer[i]);
             region_bphf_idx[idx] = i;
@@ -492,7 +445,7 @@ public:
         {
             std::ofstream region_file("sa/ref_suffix_region.bin");
             cereal::BinaryOutputArchive ar(region_file);
-            ar(rpro.rkmer_idx,rpro.region_start_idx,rpro.region_end_idx,rpro.code_bucket_idx);
+            ar(rpro->rkmer_idx,rpro->region_start_idx,rpro->region_end_idx,rpro->code_bucket_idx);
         }
 
         {
@@ -530,7 +483,7 @@ public:
         }
     }
     
-    void Get_Read_Region()
+    void Get_Read_Region(Points &read_1_buff,Points &read_2_buff)
     {
         // save read region to disk
         std::ofstream read_1_region_file;
@@ -540,8 +493,6 @@ public:
         std::ofstream rc_read_2_region_file;
 
         system("rm tmp/*");
-        read_1_buff.Initialize (read_size,dim);
-        read_1_buff.Initialize_MemoryMapped(INPUT_READ_FILE_NAME_1,Points::point_type::mapping);
 
         read_1_region_file.open(PAIR_1_REGION_FILE,std::ios::binary | std::ios::app);
         rc_read_1_region_file.open(PAIR_1_RC_REGION_FILE,std::ios::binary | std::ios::app);
@@ -549,9 +500,6 @@ public:
         {
             perror(PAIR_1_REGION_FILE);
         }
-
-        read_2_buff.Initialize (read_size,dim);
-        read_2_buff.Initialize_MemoryMapped(INPUT_READ_FILE_NAME_2,Points::point_type::mapping);
 
         read_2_region_file.open(PAIR_2_REGION_FILE,std::ios::binary);
         rc_read_2_region_file.open(PAIR_2_RC_REGION_FILE,std::ios::binary);
@@ -567,76 +515,52 @@ public:
             cereal::BinaryInputArchive ar(region_bphf_idx_file);
             ar(region_bphf_idx);
         }
-      
-        
+          
         std::string kmer;
         std::string rc_kmer;
         uint64_t rkmer_idx;
         uint64_t loc_in_rpro = 0;
+        REAL_TYPE *read_1,*read_2;
         forward_read_1_region.resize(read_size);
         forward_read_2_region.resize(read_size);
         rc_read_1_region.resize(read_size);
         rc_read_2_region.resize(read_size);
-
     #ifdef USE_PARALLELIZATION
-        #pragma omp parallel for
+        #pragma omp parallel for private(kmer,rkmer_idx,rc_kmer,read_1,read_2) num_threads(THREAD)
     #endif
         for (int i = 0; i < read_size; ++i)
         {     
-            REAL_TYPE_to_String(kmer,read_1_buff.d[i],false);
+            read_1 = new REAL_TYPE [dim];
+            read_2 = new REAL_TYPE [dim];
 
-       /*    for (int j = 0; j < dim; ++j)
-            {
-                std::cout << read_1_buff.d[i][j];
-            }
-            std::cout << std::endl;
-            std::cout << kmer << std::endl;*/
+            read_1_buff.A_Read(i,read_1);
+            REAL_TYPE_to_String(kmer,read_1,false);
+
             rkmer_idx = sa_bphf->lookup(kmer);
         //    std::cout <<  rkmer_idx << std::endl;
             forward_read_1_region[i] = region_bphf_idx[rkmer_idx];
 
-            REAL_TYPE_to_String(rc_kmer,read_1_buff.d[i],true);
+            REAL_TYPE_to_String(rc_kmer,read_1,true);
             rkmer_idx = sa_bphf->lookup(rc_kmer);
             rc_read_1_region[i] = region_bphf_idx[rkmer_idx];
 
 
-            REAL_TYPE_to_String(kmer,read_2_buff.d[i],false);
-
+            read_2_buff.A_Read(i,read_2);
+            REAL_TYPE_to_String(kmer,read_2,false);
             rkmer_idx = sa_bphf->lookup(kmer);
             forward_read_2_region[i] = region_bphf_idx[rkmer_idx];
 
-            REAL_TYPE_to_String(rc_kmer,read_2_buff.d[i],true);
+            REAL_TYPE_to_String(rc_kmer,read_2,true);
             rkmer_idx = sa_bphf->lookup(rc_kmer);
             rc_read_2_region[i] = region_bphf_idx[rkmer_idx];
-        }
-        // save read region info 
-    /*    {
-            cereal::BinaryOutputArchive ar(read_1_region_file);
-            ar(forward_read_1_region);
-        }
 
-        {
-            cereal::BinaryOutputArchive ar(read_2_region_file);
-            ar(forward_read_2_region);
+            delete read_1;
+            delete read_2;
         }
-
-        {
-            cereal::BinaryOutputArchive ar_rc(rc_read_1_region_file);
-            ar_rc(rc_read_1_region);
-        }
-
-        {
-            cereal::BinaryOutputArchive ar_rc(rc_read_2_region_file);
-            ar_rc(rc_read_2_region);
-        }
-        
-        read_1_region_file.close();
-        rc_read_1_region_file.close();
-
-        read_2_region_file.close();
-        rc_read_2_region_file.close();*/
     }
-    std::pair<int,std::vector<int>> Mapping_Process(size_t read_region, std::vector<unsigned long> &reduced_region_code,bitset<BCODE_LEN> bCodeRead,int pair)
+
+
+    std::pair<int,std::vector<int>> Mapping_Process(size_t read_region,std::vector<unsigned long> &reduced_region_code,bitset<BCODE_LEN> bCodeRead,int pair)
     {   
         bitset<BCODE_LEN> bCodeRef;
         // delete
@@ -649,17 +573,18 @@ public:
         std::vector<int> min_dis_idx;
         int dist = 0;
 
-        region_size = rpro.region_end_idx[read_region] - rpro.region_start_idx[read_region];
-        if(read_region < rpro.region_start_idx.size() && region_size > 0)
+        region_size = rpro->region_end_idx[read_region] - rpro->region_start_idx[read_region];
+        if(read_region < rpro->region_start_idx.size() && region_size > 0)
         {
             min_dis = 1000;
             for (unsigned int j = 0; j < region_size; ++j)
             {    
-                bCodeRef = reduced_region_code[rpro.region_start_idx[read_region] + j];
+                bCodeRef = reduced_region_code[rpro->region_start_idx[read_region] + j];
                 dist = Compute_HD(bCodeRead, bCodeRef);
                 
                 if (min_dis > dist)
                 {
+                //    min_dis_idx.clear();
                     min_dis_idx.push_back(j);
                     min_dis = dist;
                 //    res_code = bCodeRef.to_string();
@@ -673,21 +598,17 @@ public:
             min_dis = 1000;
             min_dis_idx.push_back(-1);
         }
-        if(pair == PAIR_1)
+    /*    if(pair == PAIR_1)
             rcode_of_read_1.push_back(res_code);
         else
-            rcode_of_read_2.push_back(res_code);
+            rcode_of_read_2.push_back(res_code);*/
 
         std::pair<int,std::vector<int>> para(min_dis,min_dis_idx);
         return para;
     }
 
-    int Hash_Mapping_with_SA()
+    int Hash_Mapping_with_SA(Points &read_1_buff,Points &read_2_buff)
     {
-
-        std::vector<uint64_t> res_read_1_region;
-        std::vector<uint64_t> res_read_2_region;
-
         std::ofstream tmp_loc_1_file;
         std::ofstream tmp_dis_1_file;
         std::ofstream read_1_code_file;
@@ -699,6 +620,9 @@ public:
         std::ofstream res_read_2_region_file;
 
         // load ref code 
+        Stopwatch T0("");
+        T0.Reset();     T0.Start();
+
         std::ifstream irinfo_file(REDUCED_REGION_INFO_FILE);
         irinfo_file.seekg(0,irinfo_file.end);
         int size = irinfo_file.tellg() / sizeof(unsigned long);
@@ -706,98 +630,121 @@ public:
         reduced_region_code.resize(size);
         irinfo_file.seekg(0,irinfo_file.beg);
         irinfo_file.read(reinterpret_cast<char*>(&reduced_region_code[0]),size * sizeof(unsigned long));
+    //    MemoryMapped reduced_region_code(REDUCED_REGION_INFO_FILE);
 
+        T0.Stop();
+        printf("- Loading Reference Code Time: (%f seconds)\n",T0.GetTime()); 
         is_read_1_rev.resize(read_size,false);
         is_read_2_rev.resize(read_size,true);
 
-    /*    Stopwatch T0("");
+        
         T0.Reset();     T0.Start();
 
+        std::vector<uint64_t> res_read_1_region(read_size);
+        std::vector<uint64_t> res_read_2_region(read_size);
 
-      
-        std::ifstream read_1_region_file;
-        std::ifstream rc_read_1_region_file;
+        REAL_TYPE *rc_read_1 ;//= new REAL_TYPE [dim];
+        REAL_TYPE *rc_read_2 ;//= new REAL_TYPE [dim];
+        REAL_TYPE *read_1,*read_2;
+    //    std::string rc_read_1,rc_read_2;
 
-        std::ifstream read_2_region_file;
-        std::ifstream rc_read_2_region_file;  
-        read_1_region_file.open(PAIR_1_REGION_FILE);
-        rc_read_1_region_file.open(PAIR_1_RC_REGION_FILE);
-
-        read_2_region_file.open(PAIR_2_REGION_FILE);
-        rc_read_2_region_file.open(PAIR_2_RC_REGION_FILE);
-        {
-            cereal::BinaryInputArchive ar_read(read_1_region_file);
-            ar_read(forward_read_1_region);
-        }
-
-        {
-            cereal::BinaryInputArchive ar_read(read_2_region_file);
-            ar_read(forward_read_2_region);
-        }
-
-        {
-            cereal::BinaryInputArchive ar_read(rc_read_1_region_file);
-            ar_read(rc_read_1_region);
-        }
-
-        {
-            cereal::BinaryInputArchive ar_read(rc_read_2_region_file);
-            ar_read(rc_read_2_region);
-        }
-
-        T0.Stop();
-        printf("- Loading Reads' Info: (%f seconds)\n",T0.GetTime());*/
-
-        Stopwatch T0("");
-        T0.Reset();     T0.Start();
-
-        REAL_TYPE *rc_read_1 = new REAL_TYPE [dim];
-        REAL_TYPE *rc_read_2 = new REAL_TYPE [dim];
         bitset<BCODE_LEN> bCodeRead_1,bCodeRead_2;
-        std::vector<bitset<BCODE_LEN>> bCodeRead_1_vec,bCodeRead_2_vec;
-        mapped_res mres_1,mres_2;
-        std::pair<int,std::vector<int>> min_res_1,min_res_2;
-        uint64_t region_1 = 0,region_2 = 0;
 
-    //    std:cout << "sarry size:" << sarry.con.size() << std::endl;
+        std::vector<bitset<BCODE_LEN>> bCodeRead_1_vec(read_size),bCodeRead_2_vec(read_size);
+
+        mapped_res mres_1,mres_2;
+
+        std::pair<int,std::vector<int>> min_res_1,min_res_2,tmp_min_res_1,tmp_min_res_2;
+
+        uint64_t region_1 = 0,region_2 = 0,tmp_region_1 = 0,tmp_region_2 = 0;
+
+        mres_1.min_code_idx.resize(read_size);
+        mres_1.min_dis.resize(read_size);
+
+        mres_2.min_code_idx.resize(read_size);
+        mres_2.min_dis.resize(read_size);
+
         std::vector<unsigned long> bCodeRef_vec;
     #ifdef USE_PARALLELIZATION
-        #pragma omp parallel for
+        #pragma omp parallel for private(region_1,region_2,tmp_region_1,tmp_region_2,min_res_1,min_res_2,tmp_min_res_1,\
+                tmp_min_res_2,bCodeRead_1,bCodeRead_2,rc_read_1,rc_read_2,read_1,read_2) num_threads(THREAD)
     #endif
         for (int i = 0; i < read_size; ++i)
         {
-            reverse_complete(read_2_buff.d[i],rc_read_2);
-            src_sh.Compute_BCode<REAL_TYPE>(read_1_buff.d[i], bCodeRead_1,true);
+            rc_read_1 = new REAL_TYPE [dim];
+            rc_read_2 = new REAL_TYPE [dim];
+            read_1 = new REAL_TYPE [dim];
+            read_2 = new REAL_TYPE [dim];
+            read_2_buff.A_Read(i,read_2);
+            read_1_buff.A_Read(i,read_1);
+        /*    for (int j = 0; j < dim; ++j)
+            {
+                std::cout << read_1[j];
+            }
+            std::cout << std::endl;
+
+            for (int j = 0; j < dim; ++j)
+            {
+                std::cout << read_2[j];
+            }
+            std::cout << std::endl;
+            for (int j = 0; j < dim; ++j)
+            {
+                std::cout << rc_read_2[j];
+            }
+            std::cout << std::endl;*/
+            reverse_complete(read_2,rc_read_2);
+            src_sh.Compute_BCode<REAL_TYPE>(read_1, bCodeRead_1,true);
             src_sh.Compute_BCode<REAL_TYPE>(rc_read_2, bCodeRead_2,true);
 
          //   Mapping_Process
             region_1 = forward_read_1_region[i];
             region_2 = rc_read_2_region[i];
+            tmp_region_1 = region_1;
+            tmp_region_2 = region_2;
+
             min_res_1 = std::move(Mapping_Process(region_1,reduced_region_code,bCodeRead_1,PAIR_1));
             min_res_2 = std::move(Mapping_Process(region_2,reduced_region_code,bCodeRead_2,PAIR_2));
+            tmp_min_res_1 = min_res_1;
+            tmp_min_res_2 = min_res_2;
+
             if (min_res_1.first > filter && min_res_2.first > filter)
             {
-                reverse_complete(read_1_buff.d[i],rc_read_1);
+                reverse_complete(read_1,rc_read_1);
                 src_sh.Compute_BCode<REAL_TYPE>(rc_read_1, bCodeRead_1,true);
-                src_sh.Compute_BCode<REAL_TYPE>(read_2_buff.d[i], bCodeRead_2,true);
+                src_sh.Compute_BCode<REAL_TYPE>(read_2, bCodeRead_2,true);
                 region_1 = rc_read_1_region[i];
                 region_2 = forward_read_2_region[i];
                 min_res_1 = std::move(Mapping_Process(region_1,reduced_region_code,bCodeRead_1,PAIR_1));
                 min_res_2 = std::move(Mapping_Process(region_2,reduced_region_code,bCodeRead_2,PAIR_2));
-                is_read_1_rev[i] = true;
-                is_read_2_rev[i] = false;
+                if (min_res_1.first + min_res_2.first > tmp_min_res_1.first + tmp_min_res_2.first)
+                {
+                    min_res_1 = tmp_min_res_1;
+                    min_res_2 = tmp_min_res_2;
+                    region_1 = tmp_region_1;
+                    region_2 = tmp_region_2;
+                }else
+                {
+                    is_read_1_rev[i] = true;
+                    is_read_2_rev[i] = false;
+                }
             }
 
-            bCodeRead_1_vec.push_back(bCodeRead_1);
-            bCodeRead_2_vec.push_back(bCodeRead_2);
+            bCodeRead_1_vec[i] = bCodeRead_1;
+            bCodeRead_2_vec[i] = bCodeRead_2;
 
-            mres_1.min_code_idx.push_back(min_res_1.second);
-            mres_1.min_dis.push_back(min_res_1.first);
-            res_read_1_region.push_back(region_1);
+            mres_1.min_code_idx[i] = min_res_1.second;
+            mres_1.min_dis[i] = min_res_1.first;
+            res_read_1_region[i] = region_1;
 
-            mres_2.min_code_idx.push_back(min_res_2.second);
-            mres_2.min_dis.push_back(min_res_2.first);
-            res_read_2_region.push_back(region_2);
+            mres_2.min_code_idx[i] = min_res_2.second;
+            mres_2.min_dis[i] = min_res_2.first;
+            res_read_2_region[i] = region_2;
+
+            delete rc_read_1;
+            delete rc_read_2;
+            delete read_1;
+            delete read_2;
         }
         T0.Stop();
         printf("- Total Mapping Time: (%f seconds)\n",T0.GetTime());   
@@ -842,6 +789,7 @@ public:
             ar_dis(CEREAL_NVP(mres_2.min_dis));
         }
         irinfo_file.close();
+    //    reduced_region_code.close();
     }
 
     void Load_Ref_Info()
@@ -859,9 +807,47 @@ public:
         }
     }
 
-    void Output_Result(int pair)
+    struct tmp_result
     {
+        int qIndex;
+        int min_dis;
+        bitset<BCODE_LEN> read_code;
+        bool is_read_rev;
+        std::string read_name;
+        std::string seq_str;
+        REAL_TYPE *seq;
+        std::vector<std::string> ref_name;
+        std::vector<std::string> ref;
+        std::vector<int> loc_to_ref;
+        template<typename OStream>
+        friend OStream &operator<<(OStream &os, const tmp_result &tr)
+        {
+           os << ">" << tr.qIndex + 1  << ":" << tr.min_dis<< ":"
+           << tr.read_code << "\t" << "-" << tr.is_read_rev << "\t" << tr.read_name << "\n= " ;
+           os << "= ";
+           if (tr.is_read_rev)
+           {
+                os << tr.seq_str << "\n";
+           }else
+           {
+                for (int i = 0; i < DIM; ++i)
+                {
+                    os << tr.seq[i];
+                }
+                os << "\n";
+           }
 
+           for (int j = 0; j < tr.ref.size(); ++j)
+           {
+                os << "+ " << tr.ref[j] << "\t" << tr.ref_name[j] << "\t" << tr.loc_to_ref[j] << "\n";
+           }
+        }
+    };
+
+
+    void Output_Result(int pair,Points &read_ptr)
+    {
+       
         std::ofstream output;
         std::ifstream tmp_loc;
         std::ifstream tmp_dis;
@@ -873,6 +859,7 @@ public:
         std::vector<bool> is_read_rev;
         std::vector<std::string> ref_code;
         Load_Ref_Info();
+        read = &read_ptr.d[0];
         if (pair == PAIR_1)
         {
             tmp_loc.open(PAIR_1_LOC_FILE);
@@ -881,7 +868,7 @@ public:
             output.open(PAIR_1_RES_FILE);
             read_region_file.open(PAIR_1_RES_REGION_FILE);
             is_read_rev = std::move(is_read_1_rev);
-            read = &read_1_buff.d[0];
+            
             ref_code = std::move(rcode_of_read_1);
         }else if (pair == PAIR_2)
         {
@@ -891,7 +878,6 @@ public:
             output.open(PAIR_2_RES_FILE);
             read_region_file.open(PAIR_2_RES_REGION_FILE);
             is_read_rev = std::move(is_read_2_rev);
-            read = &read_2_buff.d[0];
             ref_code = std::move(rcode_of_read_2);
         }
 
@@ -941,9 +927,9 @@ public:
         std::vector<std::vector<int>> ref_of_read(read_size);
         std::vector<int> ref_of_one_read;
 
-    #ifdef USE_PARALLELIZATION
+/*    #ifdef USE_PARALLELIZATION
         #pragma omp parallel for
-    #endif
+    #endif*/
         for (unsigned int qIndex = 0;qIndex < mres.min_code_idx.size();++qIndex)
         {      
             output << '>' << qIndex + 1  << ":" << mres.min_dis[qIndex] << ":" ;//<< std::endl;
@@ -967,33 +953,33 @@ public:
             {
                 for (int j = 0; j < mres.min_code_idx[qIndex].size(); ++j)
                 {
-                    if (mres.min_code_idx[qIndex][j] == rpro.code_bucket_idx[read_region[qIndex]].size() - 1)
+                    if (mres.min_code_idx[qIndex][j] == rpro->code_bucket_idx[read_region[qIndex]].size() - 1)
                     {
-                        if (read_region[qIndex] + 1 < rpro.code_bucket_idx.size() - 1)
+                        if (read_region[qIndex] + 1 < rpro->code_bucket_idx.size() - 1)
                         {
-                            //std::cout <<qIndex<<"\t"<< rpro.code_bucket_idx[read_region[qIndex] + 1][0] ;
-                            //std::cout << "\t" << rpro.code_bucket_idx[read_region[qIndex]][mres.min_code_idx[qIndex]] << std::endl;
-                            loc_size = rpro.code_bucket_idx[read_region[qIndex] + 1][0] 
-                                - rpro.code_bucket_idx[read_region[qIndex]][mres.min_code_idx[qIndex][j]];
+                            //std::cout <<qIndex<<"\t"<< rpro->code_bucket_idx[read_region[qIndex] + 1][0] ;
+                            //std::cout << "\t" << rpro->code_bucket_idx[read_region[qIndex]][mres.min_code_idx[qIndex]] << std::endl;
+                            loc_size = rpro->code_bucket_idx[read_region[qIndex] + 1][0] 
+                                - rpro->code_bucket_idx[read_region[qIndex]][mres.min_code_idx[qIndex][j]];
                         }else
                         {
                             loc_size = 1;
                         }
                     }else
                     {
-                        loc_size = rpro.code_bucket_idx[read_region[qIndex]][mres.min_code_idx[qIndex][j] + 1] 
-                            - rpro.code_bucket_idx[read_region[qIndex]][mres.min_code_idx[qIndex][j]];
+                        loc_size = rpro->code_bucket_idx[read_region[qIndex]][mres.min_code_idx[qIndex][j] + 1] 
+                            - rpro->code_bucket_idx[read_region[qIndex]][mres.min_code_idx[qIndex][j]];
                     }
         
                     for (unsigned int i = 0; i < loc_size; ++i)
                     {
-                        ref_loc = ref_loc_vec[rpro.code_bucket_idx[read_region[qIndex]][mres.min_code_idx[qIndex][j]] + i];
+                        ref_loc = ref_loc_vec[rpro->code_bucket_idx[read_region[qIndex]][mres.min_code_idx[qIndex][j]] + i];
                         if (ref_loc > 0)
                         {
 
                             //------ seek with sa------
                             output << "+ "; 
-                            for (int j = 0; j < dim; ++j)
+                            for (int j = 0; j < 262; ++j)
                             {
                                 output << (char)ictos_table[(int8_t)ref_string[ref_loc + j - SKIP]];
                             }

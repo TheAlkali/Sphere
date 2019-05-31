@@ -48,7 +48,7 @@ public:
   void close();
 
   /// access position, no range checking (faster)
-  unsigned char operator[](size_t offset) const;
+  size_t operator[](size_t offset) const;
 
   /// access position, including range checking
   unsigned long at        (size_t offset) const;

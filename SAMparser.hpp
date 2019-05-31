@@ -174,11 +174,11 @@ public:
 			if (read_seq == seq_1)
 			{
 				ref_1.push_back(rind);
-				loc_1.push_back(ref_loc);
+				loc_1.push_back(ref_loc - SKIP);
 			}else
 			{
 				ref_2.push_back(rind);
-				loc_2.push_back(ref_loc);
+				loc_2.push_back(ref_loc - SKIP);
 			}
 
 			//print the ref seq that this read_idx mapped to
@@ -244,8 +244,10 @@ public:
 		read_index = 0;
 		nP = _nP;
 		dim = _dim;
-		while(sam.peek() != EOF){
+		int count = 1;
+		while(count <= 100){
 			last_read_name = get_One_Of_Sam(out_res,sam,last_read_name);
+			count++;
 		}
 		sam.close();
 		out_res.close();

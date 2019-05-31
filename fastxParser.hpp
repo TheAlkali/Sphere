@@ -144,13 +144,10 @@ void read_fq_oneseq(std::ifstream &seqfile,std::string &name, READ &seq, std::st
 	name.clear();
 	ss >> name;
 
-//	seqint.clear();
 	while(seqfile.peek() != '+' && seqfile.peek() != EOF){	
 		std::getline(seqfile,line);
 		seq.append(line);
 	}
-	
-//	trans_seq2array(seq,seqint);
 
 	//ignore the description
 	seqfile.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
@@ -214,18 +211,19 @@ std::string merge_ref_seq(std::string filename,int seg_len){
 	std::ofstream train_data(INPUT_REF_FILE_NAME);
 	int train_num = 0;
 	int start = KMER_SIZE;
-	int cond = BCODE_LEN * seg_len + KMER_SIZE;
+	int cond = DIM - IGNORE - seg_len + 1; //BCODE_LEN * seg_len + KMER_SIZE;
 
 	std::vector<int> loc_to_ref;
 	std::vector<std::string> ref_name;
 	std::vector<size_t> ref_start;
 
+	srand (time(NULL));
 	auto t1 = std::chrono::high_resolution_clock::now();
 	for (size  = 0;seqfile__.peek() != EOF;size++){
 		seq.clear();
 		read_fa_oneseq(seqfile__,name,seq);
 		// generate training data
-		if(seq.length() > 2 * DIM)
+		if(seq.length() > DIM)
 		{
 			if (train_num < NUM_TRAIN_SAMPLES)
 			{
@@ -244,7 +242,8 @@ std::string merge_ref_seq(std::string filename,int seg_len){
 						}
 						train_data << std::endl;
 						//std::cout << std::endl;
-						start += seg_len;
+						//start += seg_len;
+						start += 1;
 					}else
 					{
 						start = KMER_SIZE;
@@ -345,28 +344,17 @@ void store_ref_kmers(std::string filename, int klen){
 }
 
 //directly store the reads to the files
-size_t store_reads(){
+size_t store_reads(Points &read_1_buff,Points &read_2_buff){
 	open_seqfile(RAW_READ_FILE_1,RAW_READ_FILE_2);
 
-	klen__ = DIM;
-
-	out_read_file_1__.open(INPUT_READ_FILE_NAME_1,std::ofstream::out);
-	out_read_file_2__.open(INPUT_READ_FILE_NAME_2,std::ofstream::out);
-	if (!out_read_file_1__.is_open()){
-		std::cerr << "can't open out_read_file:" << INPUT_READ_FILE_NAME_1 << std::endl;
-	}
-	if (!out_read_file_2__.is_open()){
-		std::cerr << "can't open out_read_file:" << INPUT_READ_FILE_NAME_2 << std::endl;
-	}
-
 	size_t size  = 0;
-	std::vector<std::string> name_vec_1;
-	std::string name_1;
-	std::string name_2;
+	std::vector<std::string> name_vec;
+	std::string name;
 	std::string fqual;
 	std::string squal;
-	READ first;
-	READ second;
+	std::string first;
+	std::string second;
+
 	std::pair<READ,READ> seqpair;
 	std::pair<std::string,std::string> qualpair;
 
@@ -377,33 +365,32 @@ size_t store_reads(){
 	Stopwatch T0("");
     T0.Reset();     T0.Start();
 	if (filetype == FASTQ && filetype2 == FASTQ){
+		// count size of reads
 		for (;seqfile__.peek() != EOF && seqfile2__.peek() != EOF;size++){
-	//	for (;size < TEST_READ;size++){
+			std::getline(seqfile__,first);
+		}
+		size /= 4;
+		std::cout << "- total reads:" << size << std::endl;
+		seqfile__.seekg(0,std::ios::beg);
+		read_1_buff.Initialize(size,DIM);
+		read_2_buff.Initialize(size,DIM);
+		
+		for (int i = 0;seqfile__.peek() != EOF && seqfile2__.peek() != EOF;i++){
 			first.clear();
 			second.clear();
-			name_1.clear();
-			name_2.clear();
-			read_fq_oneseq(seqfile__,name_1,first,fqual);
-			read_fq_oneseq(seqfile2__,name_2,second,squal);
-
-			name_vec_1.push_back(name_1);
-
-			for (int i = 0; i < klen__; ++i){
-				out_read_file_1__ << stoic_table[(int8_t)first[i]];
+			name.clear();
+			read_fq_oneseq(seqfile__,name,first,fqual);
+			read_fq_oneseq(seqfile2__,name,second,squal);
+			name_vec.push_back(name);
+			for (int j = 0; j < DIM; ++j){
+				read_1_buff.d[i][j] = stoi_table[(int8_t)first[j]];
+				read_2_buff.d[i][j] = stoi_table[(int8_t)second[j]];
 			}
-			out_read_file_1__ << "\n";
-		
-			// pair 2 reverse complete
-			
-			for (int i = 0; i < klen__; ++i){
-				out_read_file_2__ << stoic_table[(int8_t)second[i]];
-			}
-			out_read_file_2__ << "\n";
 		}
 	}
 	T0.Stop();
 	std::cout << "- Parse Fastq File Finished(" << T0.GetTime() << " seconds)" << std::endl;
-	std::cout << "- total reads:" << size << std::endl;
+	
 	seqfile__.close();
 	seqfile2__.close();
 	out_read_file_1__.close();
@@ -411,9 +398,9 @@ size_t store_reads(){
 
 	//store reads name
 	{
-		std::ofstream reads_name_1(PAIR_1_NAME_FILE);
-		cereal::BinaryOutputArchive ar(reads_name_1);
-		ar(name_vec_1);
+		std::ofstream reads_name(PAIR_1_NAME_FILE);
+		cereal::BinaryOutputArchive ar(reads_name);
+		ar(name_vec);
 	}
 	return size;
 }

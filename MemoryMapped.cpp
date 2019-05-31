@@ -184,9 +184,9 @@ void MemoryMapped::close()
 
 
 /// access position, no range checking (faster)
-unsigned char MemoryMapped::operator[](size_t offset) const
+size_t MemoryMapped::operator[](size_t offset) const
 {
-  return ((unsigned char*)_mappedView)[offset];
+  return ((size_t*)_mappedView)[offset];
 }
 
 unsigned long MemoryMapped::at(size_t offset) const

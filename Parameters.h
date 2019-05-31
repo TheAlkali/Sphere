@@ -2,12 +2,8 @@
 
 #define	REAL_TYPE				double
 
-
-// target number of nearest neighbors
-#define KNN						5
-
 // binary code length
-#define BCODE_LEN				16		
+#define BCODE_LEN				28		
 
 // number of training samples for spherical hashing
 #define NUM_TRAIN_SAMPLES		10000
@@ -24,18 +20,18 @@
 #define MAX_NUM_ITERATIONS		50
 
 #define INPUT_REF_FILE_NAME		"dataset/training_data.txt"	//
-//#define TRAINING_DATA_I			"dataset/training_i.csv"
-//#define TRAINING_DATA_J			"dataset/training_j.csv"
-#define SIMILARITY_OSP			"dataset/similarity_osp.csv"
 
 #define TRANSCRIPTS_FILE_NAME	"../reference/transcripts/Homo_sapiens.GRCh38.cdna.all.fa"//"dataset/rapmap_transcripts.fasta"
-#define TRANSCRIPTS_STRING_FILE "dataset/srrdata/true_ref_seq.txt"//"dataset/all_ref_seq.txt"
+#define TRANSCRIPTS_STRING_FILE "dataset/true_ref_seq.txt"
 
-#define RAW_READ_FILE_1			"dataset/srrdata/SRR5337025_clean_1.fastq"
-#define RAW_READ_FILE_2			"dataset/srrdata/SRR5337025_clean_2.fastq"
+#define RAW_READ_FILE_1			"dataset/srrdata/SRR534302_1.fastq"
+#define RAW_READ_FILE_2			"dataset/srrdata/SRR534302_2.fastq"
 
-#define INPUT_READ_FILE_NAME_1	"dataset/srrdata/small_srr25_1.txt"//"dataset/sim_mis_read_5_1.txt"
-#define INPUT_READ_FILE_NAME_2	"dataset/srrdata/small_srr25_2.txt"//"dataset/sim_mis_read_5_2.txt"
+#define USED_READ_FILE_NAME_1	"tmp/tmp_read_used_1.txt"
+#define USED_READ_FILE_NAME_2	"tmp/tmp_read_used_2.txt"
+
+#define UNUSED_READ_FILE_NAME_1	"tmp/tmp_read_unused_1.txt"
+#define UNUSED_READ_FILE_NAME_2	"tmp/tmp_read_unused_2.txt"
 
 #define MERGE_REF_POS_FILE		"bin/loc_to_ref.bin"
 #define MERGE_REF_SEQ_FILE		"bin/merged_ref.bin"
@@ -46,7 +42,7 @@
 #define REDUCED_REGION_INFO_FILE		"bin/reduced_region_info.bin"
 
 #define DIM						50
-#define SAM_FILE_LOC			"res/res.sam"
+#define SAM_FILE_LOC			"res/SRR534302_res.sam"
 
 #define PAIR_1 					1
 #define PAIR_2 					2
@@ -69,10 +65,13 @@
 
 
 #define CODE_BUFFER_SIZE		200000	//
-//#define READ_BUFFER_SIZE		1000
-#define KMER_SIZE				10	
-#define SKIP					5
-#define TOLERANCE				7
+#define READ_BUFFER_SIZE		50000
+#define KMER_SIZE				10
+#define SKIP					6
+#define TOLERANCE				2
+#define IGNORE					5
+
+#define THREAD					4
 
 // to disable parallelization, comment out this
 #define USE_PARALLELIZATION		
