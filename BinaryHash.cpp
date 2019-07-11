@@ -18,6 +18,12 @@ void Sphere::Set_Radius(Points *ps, Index_Distance *ids)
 	rSq = r * r;
 }
 
+void Sphere::Initialize(int _dim)
+{
+	c = new REAL_TYPE [ _dim ];
+	r = 0.0;		rSq = 0.0;
+}
+
 void SphericalHashing::Initialize(Points *_ps,int _code_len,int _seg_len)
 {
 	ps = _ps;
@@ -62,6 +68,51 @@ void SphericalHashing::Initialize(Points *_ps,int _code_len,int _seg_len)
 	{
 		ids[i] = new Index_Distance [ NUM_TRAIN_SAMPLES ];
 	}
+}
+
+
+void SphericalHashing::Save_Sphere_Info()
+{
+	std::ofstream file;
+	file.open("bin/sphere_info.log");	
+	for (int i = 0; i < code_len; ++i)
+	{
+		for (int j = 0; j < dim; ++j)
+		{
+			file << s[i].c[j] << " " ;
+		//	std::cout << s[i].c[j] << "\t" ;
+		}
+		file << s[i].rSq << std::endl;
+	//	std::cout << s[i].rSq << std::endl;
+	}
+	file.close();
+}
+
+void SphericalHashing::Load_Sphere_Info(int _code_len,int _seg_len)
+{
+	code_len = _code_len;
+	dim = _seg_len;
+
+	std::ifstream file;
+	file.open("bin/sphere_info.log");
+	std::string tmp;
+
+	s = new Sphere [ code_len ];
+	for (int i = 0; i < code_len; ++i)
+	{
+		s[i].Initialize( dim );
+
+		getline(file,tmp);
+		std::stringstream ss(tmp);
+		for (int j = 0; j < dim; ++j)
+		{
+			ss >> s[i].c[j];
+		//	std::cout << s[i].c[j] << "\t";
+		}
+		ss >> s[i].rSq;
+	//	std::cout << s[i].rSq << std::endl;
+	}
+	file.close();
 }
 
 void SphericalHashing::ReleaseMem()

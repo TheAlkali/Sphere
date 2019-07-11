@@ -6,7 +6,7 @@
 #include "Points.h"
 #include "Common.h"
 #include"fastxParser.hpp"
-#include"SAMparser.hpp"
+//#include"SAMparser.hpp"
 #include "Utils.hpp"
 
 //#include"benchmark.hpp"
@@ -45,10 +45,10 @@ int main(int argc, char const *argv[])
 			
 	if (gate == 0){		
 		//extract the mapping results of each aread to disk
-		SAMparser  sp;
+	/*	SAMparser  sp;
 		char test_sam[] = "res/res.sam";//"../rapmap_res/rapmap_res.sam";
 		char test_res[] = "sphere_res.txt";
-		sp.get_Sam(ref,test_sam,test_res,2922261,klen);
+		sp.get_Sam(ref,test_sam,test_res,2922261,klen);*/
 	}else if (gate == 1){		
 	//	store_reads();
 //		store_reads("../reads/single-cell-data/SRR5337/Simulate_GRCh38.1.fa",klen);
@@ -58,7 +58,7 @@ int main(int argc, char const *argv[])
 		difference_of_error("analyse/unknown_errors_sphere.bin","analyse/unknown_errors_rapmap.bin");
 	} else if (gate == 3){
 		//merge all refs to one
-		merge_ref_seq(ref,1);
+	//	merge_ref_seq(ref,1);
 	}else if (gate == 4){
 	/*	fparser.read_fastx(read1,read2,preadlist);
 		kmutil.set_kmer_length(klen);
@@ -84,16 +84,16 @@ int main(int argc, char const *argv[])
 		std::vector<std::vector<std::string>> rapmap_ref_name_vec;
 		std::vector<std::vector<std::string>> sphere_ref_name_vec;
 	//	Analyse_Result_Spherical();
-		std::cout << "SRR534302_res" << std::endl;
-		Analyse_Result("../hisat2_res/SRR534302_res.sam",true,hisat_ref_name_vec,0);
+		std::cout << "SRR896663_res" << std::endl;
+		Analyse_Result("../hisat2_res/SRR896663_res.sam",true,hisat_ref_name_vec,0);
 		std::cout << "analyse hsiat2 finished" << std::endl;
-		Analyse_Result("../bowtie2_res/SRR534302_res.sam",true,bowtie_ref_name_vec,0);
+		Analyse_Result("../bowtie2_res/SRR896663_res.sam",true,bowtie_ref_name_vec,0);
 		std::cout << "analyse bowtie2 finished" << std::endl;
-		Analyse_Result("../rapmap_res/SRR534302_res.sam",true,rapmap_ref_name_vec,0);
+		Analyse_Result("../rapmap_res/SRR896663_res.sam",true,rapmap_ref_name_vec,0);
 		std::cout << "analyse rapmap finished" << std::endl;
-		Analyse_Result("res/SRR534302_res.sam",true,sphere_ref_name_vec,0);
+		Analyse_Result("res/SRR896663_res.sam",true,sphere_ref_name_vec,0);
 		std::cout << "analyse bit-mapping finished" << std::endl;
-
+/*
 		std::cout << "hisat2 and rapmap" << std::endl;
 		Intersection_Of_Two_Results(rapmap_ref_name_vec,hisat_ref_name_vec);
 		std::cout << "hisat2 and bowtie2" <<  "\t" << bowtie_ref_name_vec.size() << "\t" <<  hisat_ref_name_vec.size() << std::endl;
@@ -120,6 +120,7 @@ int main(int argc, char const *argv[])
 
 		std::cout << "hisat, rapmap, hisat2 and bowtie2" << std::endl;
 		Intersection_Of_Four_Results(hisat_ref_name_vec,rapmap_ref_name_vec,bowtie_ref_name_vec,sphere_ref_name_vec);
+		*/
 	}else if (gate == 7){
 		//ref kmer count:282626422
 		count_ref_kmer("dataset/ref_kmer.txt");

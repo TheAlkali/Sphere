@@ -9,15 +9,7 @@ test
 rapmap
 main
 *.o
-.gitignore
-bowtie2test.cpp
-bowtie2test
-rapmaptest.cpp
-rapmaptest
-TEST_RES/*
-startest
-STARtest.cpp
 analyse/*
-hisat2test.cpp
-hisat2test
+exp.sh
+
 

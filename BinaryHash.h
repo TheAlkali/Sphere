@@ -5,7 +5,6 @@
 #include <fstream>
 #include <sstream>
 
-
 // hamming distance function
 __inline int Compute_HD(bitset<BCODE_LEN> &a, bitset<BCODE_LEN> &b)
 {
@@ -36,11 +35,7 @@ class Sphere
 public :
 	REAL_TYPE *c, r, rSq;
 	
-	void Initialize(int _dim)
-	{
-		c = new REAL_TYPE [ _dim ];
-		r = 0.0;		rSq = 0.0;
-	}
+	void Initialize(int _dim);
 
 	// function to set radius to include desired portion of training set
 	void Set_Radius(Points *ps, Index_Distance *ids);
@@ -75,10 +70,10 @@ public :
 		int start;
 		if (is_read)
 		{
-			start = KMER_SIZE + SKIP;	
+			start = Parameter::region_searching + Parameter::skip;	
 		}else
 		{
-			start = KMER_SIZE;
+			start = Parameter::region_searching;
 		}
 	#ifdef USE_PARALLELIZATION
 		#pragma omp parallel for
@@ -101,47 +96,7 @@ public :
 	//	std::cout << y << std::endl;
 	}
 
-	void Save_Sphere_Info()
-	{
-		std::ofstream file;
-		file.open("bin/sphere_info.log");	
-		for (int i = 0; i < code_len; ++i)
-		{
-			for (int j = 0; j < dim; ++j)
-			{
-				file << s[i].c[j] << " " ;
-			//	std::cout << s[i].c[j] << "\t" ;
-			}
-			file << s[i].rSq << std::endl;
-		//	std::cout << s[i].rSq << std::endl;
-		}
-		file.close();
-	}
+	void Save_Sphere_Info();
 
-	void Load_Sphere_Info(int _code_len,int _seg_len)
-	{
-		code_len = _code_len;
-		dim = _seg_len;
-
-		std::ifstream file;
-		file.open("bin/sphere_info.log");
-		std::string tmp;
-
-		s = new Sphere [ code_len ];
-		for (int i = 0; i < code_len; ++i)
-		{
-			s[i].Initialize( dim );
-
-			getline(file,tmp);
-			std::stringstream ss(tmp);
-			for (int j = 0; j < dim; ++j)
-			{
-				ss >> s[i].c[j];
-			//	std::cout << s[i].c[j] << "\t";
-			}
-			ss >> s[i].rSq;
-		//	std::cout << s[i].rSq << std::endl;
-		}
-		file.close();
-	}
+	void Load_Sphere_Info(int _code_len,int _seg_len);
 };
