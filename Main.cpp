@@ -15,6 +15,12 @@ int main(int argc, char const *argv[])
 //int main()
 {	
 	std::string par;
+	Parameter::dim = 143;
+	Parameter::type = "mapping";
+	Parameter::read_file_1 = "dataset/srrdata/sim_read_small_250_1.fastq";
+	Parameter::read_file_2 = "dataset/srrdata/sim_read_small_250_2.fastq";
+	Parameter::sam = "testbp_107bits.sam";
+	Parameter::transcripts_file_name = "/home/yxt/Documents/work/RNA-seq/reference/transcripts/Homo_sapiens.GRCh38.cdna.all.fa";
 	for (int i = 0; i < argc; ++i)
 	{
 		par = argv[i];
@@ -37,7 +43,7 @@ int main(int argc, char const *argv[])
 		}else if (par.compare("-g") == 0)
 		{
 			Parameter::ignore = std::atoi(argv[i + 1]);
-		}else if (par.compare("-t") == 0)
+		}else if (par.compare("-p") == 0)
 		{
 			Parameter::thread = std::atoi(argv[i + 1]);
 		}else if (par.compare("-I") == 0)
@@ -52,10 +58,16 @@ int main(int argc, char const *argv[])
 		}else if (par.compare("-d") == 0)
 		{
 			Parameter::dim = std::atoi(argv[i + 1]);
+		}else if (par.compare("-c") == 0)
+		{
+			Parameter::bcode_len = std::atoi(argv[i + 1]);
+		}else if (par.compare("-t") == 0)
+		{
+			Parameter::tolerance = std::atoi(argv[i + 1]);
 		}
 	}
 
-	Parameter::bcode_len = (Parameter::dim - Parameter::region_searching - Parameter::skip - Parameter::ignore) - Parameter::kmer + 1; /// 
+	//Parameter::bcode_len = (Parameter::dim - Parameter::region_searching - Parameter::skip - Parameter::ignore) - Parameter::kmer + 1; /// 
 	std::cout << "- hash code length:"<< Parameter::bcode_len << std::endl;
 
 	Stopwatch T0("");
@@ -94,7 +106,10 @@ int main(int argc, char const *argv[])
 
 		map->Hash_Mapping_with_SA(read_1_buff,read_2_buff);
 
-	/*	map->Load_Ref_Info();
+		read_1_buff.ReleaseMem();
+		read_2_buff.ReleaseMem();
+
+		/*map->Load_Ref_Info();
 		map->Output_Result(PAIR_1,read_1_buff);
 		map->Output_Result(PAIR_2,read_2_buff);*/
 
@@ -104,6 +119,7 @@ int main(int argc, char const *argv[])
 
 		sp->Analyse_Result_Pair(rpro);
 
+		read_size = fparser.store_reads(read_1_buff, read_2_buff, Parameter::read_file_1, Parameter::read_file_2);
 		T2.Reset();     T2.Start();
 		sp->Generate_SAM(read_1_buff,read_2_buff,Parameter::sam);
 		T2.Stop();

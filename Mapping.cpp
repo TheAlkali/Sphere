@@ -2,6 +2,7 @@
 #include <iostream>
 #include <cassert>
 #include <memory>
+#include <vector>
 #include "math.h"
 #include "string.h"
 
@@ -58,11 +59,12 @@ void Mapping::Compute_All_Ref_Code()
 
     bCodeRef_file.open(REF_HASH_FILE,std::ios::binary);
     
-    std::vector<unsigned long> bCodeRef_vec(buffer_size);
+    //std::vector<unsigned long long> bCodeRef_vec(buffer_size);
+    std::vector<std::pair<unsigned long long, unsigned long long >> bCodeRef_vec(buffer_size);
 
     size_t loc_in_file = 0;
     int ref_buffer_count = 0;
-    bitset<BCODE_LEN> bCodeRef;
+    bitset<BCODE_64> bCodeRef_1, bCodeRef_2;
     REAL_TYPE *seq = new REAL_TYPE[dim];
     for (int i = 0; i < rpro->region_start_idx.size(); ++i)
     {   
@@ -71,7 +73,7 @@ void Mapping::Compute_All_Ref_Code()
             //if buffer is full, store ref codes to disk
             if (ref_buffer_count == buffer_size)
             {
-                bCodeRef_file.write(reinterpret_cast<const char*>(&bCodeRef_vec[0]),buffer_size * sizeof(unsigned long));
+                bCodeRef_file.write(reinterpret_cast<const char*>(&bCodeRef_vec[0]),buffer_size * sizeof(std::pair<unsigned long long, unsigned long long >));
                 ref_buffer_count = 0;
             }
             
@@ -79,14 +81,22 @@ void Mapping::Compute_All_Ref_Code()
             {
                 seq[k] = ictoi_table[ref_string[sarry.con[j] + k]];
             }
-            src_sh.Compute_BCode<REAL_TYPE>(seq,bCodeRef,false);
-        //    std::cout << bCodeRef << std::endl << std::endl;
-            bCodeRef_vec[ref_buffer_count] = bCodeRef.to_ulong();         
+            src_sh.Compute_BCode_Ref<REAL_TYPE>(seq,bCodeRef_1, 0);
+            //std::cout << bCodeRef_1 << std::endl;
+            src_sh.Compute_BCode_Ref<REAL_TYPE>(seq,bCodeRef_2, BCODE_64);
+            //std::cout << bCodeRef.to_ulong() << std::endl << std::endl;
+            bCodeRef_vec[ref_buffer_count].first = bCodeRef_1.to_ullong();         
+            bCodeRef_vec[ref_buffer_count].second = bCodeRef_2.to_ullong();
             ref_buffer_count++;
            
         }
         loc_in_file += rpro->region_end_idx[i] - rpro->region_start_idx[i];
 
+    }
+
+    if (ref_buffer_count > 0 && ref_buffer_count < buffer_size)
+    {
+        bCodeRef_file.write(reinterpret_cast<const char*>(&bCodeRef_vec[0]),buffer_size * sizeof(std::pair<unsigned long long, unsigned long long >));
     }
     bCodeRef_file.close();    
 }
@@ -97,15 +107,15 @@ void Mapping::Merge_Duplicated_In_Region()
     std::ofstream bucket_file(REDUCED_REGION_CODE_BUCKET_FILE);
     std::ifstream bCodeRef_file(REF_HASH_FILE);
 
-    std::vector<unsigned long> bCodeRef_vec;
-    std::vector<unsigned long> reduced_region_code;
+    std::vector<std::pair<unsigned long long, unsigned long long >> bCodeRef_vec;
+    std::vector<std::pair<unsigned long long, unsigned long long>> reduced_region_code;
 
     std::vector<std::vector<size_t>> reduced_code_bucket;
     std::vector<size_t> each_bucket_idx;
 
     // record the first location that the unique hashcode appear in sa and store them in bucket
 //    std::vector<int> loc_in_bucket;
-    std::map<size_t,int> loc_in_bucket;
+    std::map<std::pair<unsigned long long, unsigned long long>,int> loc_in_bucket;
     int region_size = 0;
     int max_element = 0;
     int unique_size = 0;
@@ -119,8 +129,8 @@ void Mapping::Merge_Duplicated_In_Region()
     //    std::cout <<rpro->region_end_idx[i] << "\t"<< rpro->region_start_idx[i]<< "\t"<< region_size << std::endl;
         bCodeRef_vec.resize(region_size);
         bCodeRef_file.clear();
-        bCodeRef_file.seekg(rpro->region_start_idx[i] * sizeof(unsigned long),bCodeRef_file.beg);
-        bCodeRef_file.read(reinterpret_cast<char*>(&bCodeRef_vec[0]),region_size * sizeof(unsigned long));
+        bCodeRef_file.seekg(rpro->region_start_idx[i] * sizeof(std::pair<unsigned long long, unsigned long long>),bCodeRef_file.beg);
+        bCodeRef_file.read(reinterpret_cast<char*>(&bCodeRef_vec[0]),region_size * sizeof(std::pair<unsigned long long, unsigned long long>));
 
         //find the max element in vec
     /*    max_element = *(std::max_element(std::begin(bCodeRef_vec), std::end(bCodeRef_vec)));
@@ -149,7 +159,7 @@ void Mapping::Merge_Duplicated_In_Region()
         rpro->region_end_idx[i] = region_start;
 
         // save unique ref code to file
-        irinfo_file.write(reinterpret_cast<const char*>(&reduced_region_code[0]),unique_size * sizeof(unsigned long));
+        irinfo_file.write(reinterpret_cast<const char*>(&reduced_region_code[0]),unique_size * sizeof(std::pair<unsigned long long, unsigned long long>));
     
         for (int j = 0; j < unique_size; ++j)
         {
@@ -262,9 +272,11 @@ void Mapping::Suffix_Array(int seg_len)
         // learning hash functions
         Points ref_buff;
             
-        ref_buff.Initialize(NUM_TRAIN_SAMPLES * Parameter::bcode_len, Parameter::kmer);
+        //ref_buff.Initialize(NUM_TRAIN_SAMPLES * Parameter::Parameter::bcode_len, Parameter::kmer);
+        ref_buff.Initialize(NUM_TRAIN_SAMPLES * BCODE_LEN, seg_len);
         ref_buff.Initialize_From_File(INPUT_REF_FILE_NAME);
-        Learn_Spherical_Hashing(ref_buff, Parameter::bcode_len, Parameter::kmer);
+        //Learn_Spherical_Hashing(ref_buff, Parameter::Parameter::bcode_len, Parameter::kmer);
+        Learn_Spherical_Hashing(ref_buff, BCODE_LEN, seg_len);
 
  
     sarry.size = ref_string.size();
@@ -505,10 +517,95 @@ void Mapping::Get_Read_Region(Points &read_1_buff,Points &read_2_buff)
     }
 }
 
+void Mapping:: Resize_Hashcode(std::vector<bitset<BCODE_LEN>> &ref_code_vec)
+{
+    Stopwatch T0("");
+    T0.Reset();     T0.Start();
 
-std::pair<int,std::vector<int>> Mapping::Mapping_Process(size_t read_region,std::vector<unsigned long> &reduced_region_code,bitset<BCODE_LEN> bCodeRead,int pair)
+    std::ifstream irinfo_file(REDUCED_REGION_INFO_FILE);
+    irinfo_file.seekg(0,irinfo_file.end);
+    int size = irinfo_file.tellg() / sizeof(std::pair<unsigned long long, unsigned long long>);
+    std::vector<std::pair<unsigned long long, unsigned long long>> reduced_region_code;
+    reduced_region_code.resize(size);
+    irinfo_file.seekg(0,irinfo_file.beg);
+    irinfo_file.read(reinterpret_cast<char*>(&reduced_region_code[0]),size * sizeof(std::pair<unsigned long long, unsigned long long>));
+
+    T0.Stop();
+    printf("- Loading Reference Code Time: (%f seconds)\n",T0.GetTime()); 
+    
+    bitset<BCODE_LEN> code;
+    bitset<BCODE_64> tmp_code;
+    std::cout << size << std::endl;
+    ref_code_vec.resize(size);
+
+    T0.Reset();     T0.Start();
+    if (BCODE_LEN < BCODE_64)
+    {
+    #ifdef USE_PARALLELIZATION
+        #pragma omp parallel for private(tmp_code, code) num_threads(Parameter::thread)
+    #endif
+        for (int i = 0; i < size; ++i)
+        {
+            tmp_code = reduced_region_code[i].first;
+            for (int j = 0; j < BCODE_LEN; ++j)
+            {
+                code[j] = tmp_code[j];
+            }
+            ref_code_vec[i] = code;
+        }
+    }else if (BCODE_LEN == BCODE_64)
+    {
+    #ifdef USE_PARALLELIZATION
+        #pragma omp parallel for num_threads(Parameter::thread)
+    #endif
+        for (int i = 0; i < size; ++i)
+        {
+            ref_code_vec[i] = reduced_region_code[i].first;
+        }
+    } else if (BCODE_LEN > BCODE_64 && BCODE_LEN <= BCODE_128)
+    {
+        
+    #ifdef USE_PARALLELIZATION
+        #pragma omp parallel for private(tmp_code, code) num_threads(Parameter::thread)
+    #endif
+        for (int i = 0; i < size; ++i)
+        {
+            tmp_code = reduced_region_code[i].first;
+            for (int j = 0; j < BCODE_64; ++j)
+            {
+                code[j] = tmp_code[j];
+            }
+            /*for (int k = 0; k < BCODE_64; ++k)
+            {
+                std::cout << tmp_code[k];
+            }
+            std::cout << std::endl;*/
+            tmp_code = reduced_region_code[i].second;
+            /*for (int k = 0; k < BCODE_64; ++k)
+            {
+                std::cout << tmp_code[k];
+            }
+            std::cout << std::endl;*/
+            for (int j = 0; j < BCODE_LEN - BCODE_64; ++j)
+            {
+                code[j + 64] = tmp_code[j];
+            }
+            ref_code_vec[i] = code;
+            /*for (int k = 0; k < BCODE_LEN; ++k)
+            {
+                std::cout << code[k];
+            }
+            std::cout << std::endl << std::endl;*/
+        }
+    }
+     T0.Stop();
+    printf("- Resizing Ref Hashcode Finished: (%f seconds)\n",T0.GetTime()); 
+}
+
+std::pair<int,std::vector<int>> Mapping::Mapping_Process(size_t read_region,
+    std::vector<bitset<BCODE_LEN>> &reduced_region_code, bitset<BCODE_LEN> bCodeRead,int pair)
 {   
-    bitset<BCODE_LEN> bCodeRef;
+    bitset<BCODE_LEN> bCodeRef;    
     // delete
     std::string res_code;
 
@@ -526,11 +623,13 @@ std::pair<int,std::vector<int>> Mapping::Mapping_Process(size_t read_region,std:
         for (unsigned int j = 0; j < region_size; ++j)
         {    
             bCodeRef = reduced_region_code[rpro->region_start_idx[read_region] + j];
+            //std::cout << bCodeRead << std::endl;
+            //std::cout << bCodeRef << std::endl << std::endl;
             dist = Compute_HD(bCodeRead, bCodeRef);
             
             if (min_dis > dist)
             {
-            //    min_dis_idx.clear();
+                min_dis_idx.clear();
                 min_dis_idx.push_back(j);
                 min_dis = dist;
             //    res_code = bCodeRef.to_string();
@@ -544,6 +643,14 @@ std::pair<int,std::vector<int>> Mapping::Mapping_Process(size_t read_region,std:
         min_dis = 1000;
         min_dis_idx.push_back(-1);
     }
+    /*std::cout << "read cod:" << bCodeRead << "\t" << min_dis << std::endl;
+    for (int i = 0; i < min_dis_idx.size(); ++i)
+    {
+        bCodeRef = reduced_region_code[rpro->region_start_idx[read_region] + min_dis_idx[i]];
+        std::cout << "seq code:" << bCodeRef << std::endl;
+    }
+    std::cout << std::endl;*/
+
 /*    if(pair == PAIR_1)
         rcode_of_read_1.push_back(res_code);
     else
@@ -569,17 +676,22 @@ int Mapping::Hash_Mapping_with_SA(Points &read_1_buff,Points &read_2_buff)
     Stopwatch T0("");
     T0.Reset();     T0.Start();
 
-    std::ifstream irinfo_file(REDUCED_REGION_INFO_FILE);
+   /* std::ifstream irinfo_file(REDUCED_REGION_INFO_FILE);
     irinfo_file.seekg(0,irinfo_file.end);
-    int size = irinfo_file.tellg() / sizeof(unsigned long);
-    std::vector<unsigned long> reduced_region_code;
+    int size = irinfo_file.tellg() / sizeof(std::pair<unsigned long long, unsigned long long>);
+    std::vector<std::pair<unsigned long long, unsigned long long>> reduced_region_code;
     reduced_region_code.resize(size);
     irinfo_file.seekg(0,irinfo_file.beg);
-    irinfo_file.read(reinterpret_cast<char*>(&reduced_region_code[0]),size * sizeof(unsigned long));
+    irinfo_file.read(reinterpret_cast<char*>(&reduced_region_code[0]),size * sizeof(std::pair<unsigned long long, unsigned long long>));
 //    MemoryMapped reduced_region_code(REDUCED_REGION_INFO_FILE);
 
     T0.Stop();
-    printf("- Loading Reference Code Time: (%f seconds)\n",T0.GetTime()); 
+    printf("- Loading Reference Code Time: (%f seconds)\n",T0.GetTime()); */
+
+    std::vector<bitset<BCODE_LEN>> reduced_region_code;
+    Resize_Hashcode(reduced_region_code);
+
+
     is_read_1_rev.resize(read_size,false);
     is_read_2_rev.resize(read_size,true);
 
@@ -610,7 +722,7 @@ int Mapping::Hash_Mapping_with_SA(Points &read_1_buff,Points &read_2_buff)
     mres_2.min_code_idx.resize(read_size);
     mres_2.min_dis.resize(read_size);
 
-    std::vector<unsigned long> bCodeRef_vec;
+    std::vector<unsigned long long> bCodeRef_vec;
 #ifdef USE_PARALLELIZATION
     #pragma omp parallel for private(region_1,region_2,tmp_region_1,tmp_region_2,min_res_1,min_res_2,tmp_min_res_1,\
             tmp_min_res_2,bCodeRead_1,bCodeRead_2,rc_read_1,rc_read_2,read_1,read_2) num_threads(Parameter::thread)
@@ -623,7 +735,7 @@ int Mapping::Hash_Mapping_with_SA(Points &read_1_buff,Points &read_2_buff)
         read_2 = new REAL_TYPE [dim];
         read_2_buff.A_Read(i,read_2);
         read_1_buff.A_Read(i,read_1);
-    /*    for (int j = 0; j < dim; ++j)
+        /*for (int j = 0; j < dim; ++j)
         {
             std::cout << read_1[j];
         }
@@ -640,8 +752,8 @@ int Mapping::Hash_Mapping_with_SA(Points &read_1_buff,Points &read_2_buff)
         }
         std::cout << std::endl;*/
         fparser.reverse_complete(read_2,rc_read_2);
-        src_sh.Compute_BCode<REAL_TYPE>(read_1, bCodeRead_1,true);
-        src_sh.Compute_BCode<REAL_TYPE>(rc_read_2, bCodeRead_2,true);
+        src_sh.Compute_BCode_Read<REAL_TYPE>(read_1, bCodeRead_1);
+        src_sh.Compute_BCode_Read<REAL_TYPE>(rc_read_2, bCodeRead_2);
 
      //   Mapping_Process
         region_1 = forward_read_1_region[i];
@@ -657,8 +769,8 @@ int Mapping::Hash_Mapping_with_SA(Points &read_1_buff,Points &read_2_buff)
         if (min_res_1.first > Parameter::filter && min_res_2.first > Parameter::filter)
         {
             fparser.reverse_complete(read_1,rc_read_1);
-            src_sh.Compute_BCode<REAL_TYPE>(rc_read_1, bCodeRead_1,true);
-            src_sh.Compute_BCode<REAL_TYPE>(read_2, bCodeRead_2,true);
+            src_sh.Compute_BCode_Read<REAL_TYPE>(rc_read_1, bCodeRead_1);
+            src_sh.Compute_BCode_Read<REAL_TYPE>(read_2, bCodeRead_2);
             region_1 = rc_read_1_region[i];
             region_2 = forward_read_2_region[i];
             min_res_1 = std::move(Mapping_Process(region_1,reduced_region_code,bCodeRead_1,PAIR_1));
@@ -734,7 +846,7 @@ int Mapping::Hash_Mapping_with_SA(Points &read_1_buff,Points &read_2_buff)
         ar_loc(CEREAL_NVP(mres_2.min_code_idx));
         ar_dis(CEREAL_NVP(mres_2.min_dis));
     }
-    irinfo_file.close();
+   // irinfo_file.close();
 //    reduced_region_code.close();
 }
 
@@ -753,7 +865,7 @@ void Mapping::Load_Ref_Info()
     }
 }
 
-/*
+
 void Mapping::Output_Result(int pair,Points &read_ptr)
 {
    
@@ -836,9 +948,9 @@ void Mapping::Output_Result(int pair,Points &read_ptr)
     std::vector<std::vector<int>> ref_of_read(read_size);
     std::vector<int> ref_of_one_read;
 
-    #ifdef USE_PARALLELIZATION
+/*    #ifdef USE_PARALLELIZATION
     #pragma omp parallel for
-#endif
+#endif*/
     for (unsigned int qIndex = 0;qIndex < mres.min_code_idx.size();++qIndex)
     {      
         output << '>' << qIndex + 1  << ":" << mres.min_dis[qIndex] << ":" ;//<< std::endl;
@@ -847,6 +959,7 @@ void Mapping::Output_Result(int pair,Points &read_ptr)
 
         if (is_read_rev[qIndex])
         {
+
             fparser.reverse_complete_ictos(read[qIndex],rev_read);
             output << rev_read << std::endl;
         }else
@@ -921,4 +1034,4 @@ void Mapping::Output_Result(int pair,Points &read_ptr)
     bucket_file.close();
     T0.Stop();
     printf("- Save Mapping Results To Disk Finished (%f seconds)\n",T0.GetTime() );
-}*/
+}

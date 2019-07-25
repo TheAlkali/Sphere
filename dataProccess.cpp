@@ -5,23 +5,22 @@
 //#include"kmerUtils.hpp"
 #include "Points.h"
 #include "Common.h"
-#include"fastxParser.hpp"
+#include"FastxParser.hpp"
 //#include"SAMparser.hpp"
 #include "Utils.hpp"
 
 //#include"benchmark.hpp"
 
-void Analyse_Result_Spherical();
-void count_ref_kmer(std::string);
-void Analyse_Result(std::string,bool flag,std::vector<std::vector<std::string>>&,int);
+//void Analyse_Result_Spherical();
+void Analyse_Result(std::string,bool flag,std::vector<std::vector<std::string>>&);
 void Analyse_True_Result(std::vector<std::vector<std::string>>);
 void Intersection_Of_Two_Results(std::vector<std::vector<std::string>>,std::vector<std::vector<std::string>>);
 void Intersection_Of_Three_Results(std::vector<std::vector<std::string>>,std::vector<std::vector<std::string>>,std::vector<std::vector<std::string>>);
 void Intersection_Of_Four_Results(std::vector<std::vector<std::string>>,std::vector<std::vector<std::string>>,
 								std::vector<std::vector<std::string>>,std::vector<std::vector<std::string>>);
 void analyse_tid();
-void rand_prob();
 void difference_of_error(std::string,std::string);
+void ref_of_art_sim(std::string);
 
 
 int main(int argc, char const *argv[])
@@ -30,7 +29,7 @@ int main(int argc, char const *argv[])
 //	kmerUtils kmutil;
 	int klen = 50;
 //	LSH lsh;
-	int gate = 6;//std::atoi(argv[1]);
+	int gate = 5;// std::atoi(argv[1]);
 
 	char ref[] = "../reference/transcripts/Homo_sapiens.GRCh38.cdna.all.fa";
 	char read1[] = "dataset/srrdata/SRR5337025_1.fastq";//"dataset/rapmap_reads_1.fastq";
@@ -77,23 +76,48 @@ int main(int argc, char const *argv[])
 	//	Analyse_Result("../hisat2_res/hisat2_res.sam",false,hisat_ref_name_vec,2250009);
 	//	Analyse_Result("../bowtie2_res/bowtie2_res.sam",false,bowtie_ref_name_vec,2522231);
 	//	Analyse_Result("../rapmap_res/rapmap_res.sam",false,rapmap_ref_name_vec,2081302);
-		Analyse_Result("res/res.sam",false,sphere_ref_name_vec,2522231);
+
+		ref_of_art_sim("dataset/srrdata/sim_read_small_250_1.fastq");
+		std::cout << "analyse ref finished" << std::endl;
+		
+		
+		Analyse_Result("res/250bp_27bits.sam",false,bowtie_ref_name_vec);
+		bowtie_ref_name_vec.clear();
+		Analyse_Result("res/250bp_37bits.sam",false,bowtie_ref_name_vec);
+		bowtie_ref_name_vec.clear();
+		Analyse_Result("res/250bp_47bits.sam",false,bowtie_ref_name_vec);
+		bowtie_ref_name_vec.clear();
+		Analyse_Result("res/250bp_57bits.sam",false,bowtie_ref_name_vec);
+		bowtie_ref_name_vec.clear();
+		Analyse_Result("res/250bp_67bits.sam",false,sphere_ref_name_vec);
+		Analyse_Result("res/250bp_77bits.sam",false,hisat_ref_name_vec);
+		Analyse_Result("res/250bp_87bits.sam",false,bowtie_ref_name_vec);
+		bowtie_ref_name_vec.clear();
+		Analyse_Result("res/250bp_97bits.sam",false,bowtie_ref_name_vec);
+		bowtie_ref_name_vec.clear();
+		Analyse_Result("res/250bp_107bits.sam",false,bowtie_ref_name_vec);
+		bowtie_ref_name_vec.clear();
+		Analyse_Result("res/250bp_117bits.sam",false,bowtie_ref_name_vec);
+		bowtie_ref_name_vec.clear();
+		Analyse_Result("res/250bp_127bits.sam",false,bowtie_ref_name_vec);
+		bowtie_ref_name_vec.clear();
+		//Analyse_Result("../rapmap_res/sim_250_res.sam",false,rapmap_ref_name_vec);
 	}else if (gate == 6){
 		std::vector<std::vector<std::string>> bowtie_ref_name_vec;
 		std::vector<std::vector<std::string>> hisat_ref_name_vec;
 		std::vector<std::vector<std::string>> rapmap_ref_name_vec;
 		std::vector<std::vector<std::string>> sphere_ref_name_vec;
 	//	Analyse_Result_Spherical();
-		std::cout << "SRR896663_res" << std::endl;
-		Analyse_Result("../hisat2_res/SRR896663_res.sam",true,hisat_ref_name_vec,0);
+		std::cout << "SRR1293901_res" << std::endl;
+		Analyse_Result("../hisat2_res/SRR1293902_res.sam",true,hisat_ref_name_vec);
 		std::cout << "analyse hsiat2 finished" << std::endl;
-		Analyse_Result("../bowtie2_res/SRR896663_res.sam",true,bowtie_ref_name_vec,0);
+		Analyse_Result("../bowtie2_res/SRR1293902_res.sam",true,bowtie_ref_name_vec);
 		std::cout << "analyse bowtie2 finished" << std::endl;
-		Analyse_Result("../rapmap_res/SRR896663_res.sam",true,rapmap_ref_name_vec,0);
+		Analyse_Result("../rapmap_res/SRR1293902_res.sam",true,rapmap_ref_name_vec);
 		std::cout << "analyse rapmap finished" << std::endl;
-		Analyse_Result("res/SRR896663_res.sam",true,sphere_ref_name_vec,0);
+		Analyse_Result("res/SRR1293902_res.sam",true,sphere_ref_name_vec);
 		std::cout << "analyse bit-mapping finished" << std::endl;
-/*
+
 		std::cout << "hisat2 and rapmap" << std::endl;
 		Intersection_Of_Two_Results(rapmap_ref_name_vec,hisat_ref_name_vec);
 		std::cout << "hisat2 and bowtie2" <<  "\t" << bowtie_ref_name_vec.size() << "\t" <<  hisat_ref_name_vec.size() << std::endl;
@@ -120,12 +144,7 @@ int main(int argc, char const *argv[])
 
 		std::cout << "hisat, rapmap, hisat2 and bowtie2" << std::endl;
 		Intersection_Of_Four_Results(hisat_ref_name_vec,rapmap_ref_name_vec,bowtie_ref_name_vec,sphere_ref_name_vec);
-		*/
-	}else if (gate == 7){
-		//ref kmer count:282626422
-		count_ref_kmer("dataset/ref_kmer.txt");
-	}else if (gate == 8){
-	//	store_reads_name(read1);
+		
 	}else if (gate == 9)
 	{
 		analyse_tid();
@@ -173,18 +192,6 @@ void analyse_tid(){
 	}
 }
 
-void count_ref_kmer(std::string filename){
-	std::ifstream ref_kmer;
-	ref_kmer.open(filename);
-	size_t count = 0;
-	std::string tmp;
-	while(ref_kmer.peek() != EOF){
-		getline(ref_kmer,tmp);
-		count++;
-	}
-	std::cout << "ref kmer count:" << count << std::endl;
-}
-
 void difference_of_error(std::string file1,std::string file2)
 {
 	std::vector<std::string> error1,error2;
@@ -220,6 +227,28 @@ void difference_of_error(std::string file1,std::string file2)
 	out2.close();
 }
 
+void ref_of_art_sim(std::string filename)
+{
+	std::ifstream file(filename);
+	std::string line, ref;
+	std::vector<std::string> ref_of_read;
+	for (int i = 1; file.peek() != EOF; ++i)
+	{
+		getline(file, line);
+		if (i % 4 == 1)
+		{
+			ref = line.substr(1, line.find_first_of("-") - 1);
+			ref_of_read.push_back(ref);
+		}
+	}
+
+	{
+        std::ofstream out("../art/ref_of_mapping_read.bin");
+        cereal::BinaryOutputArchive ar(out);
+        ar(ref_of_read);
+    }
+}
+/*
 std::vector<std::string> Save_Ref_Of_Read()
 {
 	std::vector<std::vector<int> > ref_of_read_1;
@@ -341,16 +370,16 @@ std::vector<std::string> Save_Ref_Of_Read()
     error_read_all.close();
     error_read_half.close();
     return error_read_half_vec;
-}
+}*/
 
-void Analyse_Sim_Result(std::vector<std::vector<std::string>> ref_of_reads,std::vector<std::string> true_ref_of_reads,int total,bool flag,std::vector<std::string> error_read_all = std::vector<std::string>(1,"test"))
+void Analyse_Sim_Result(std::vector<std::vector<std::string>> ref_of_reads,std::vector<std::string> true_ref_of_reads,bool flag,std::vector<std::string> error_read_all = std::vector<std::string>(1,"test"))
 {
-	std::vector<std::string> read_name;
+/*	std::vector<std::string> read_name;
     {
         std::ifstream read_name_file(PAIR_1_NAME_FILE);
         cereal::BinaryInputArchive ar(read_name_file);
         ar(read_name);
-    }
+    }*/
 
 
     std::ofstream error_read_file;
@@ -358,13 +387,17 @@ void Analyse_Sim_Result(std::vector<std::vector<std::string>> ref_of_reads,std::
     error_read_file.open("analyse/error_read_sphere.txt");
 	std::vector<std::string> error_read;
 	std::vector<std::string> ref;
+	int total = true_ref_of_reads.size();
     int mapped = 0,error = 0,unmapped  =0;
     int j = 0;
     for (int i = 0; i < ref_of_reads.size(); ++i)
     {
         ref = ref_of_reads[i];
+        //std::cout <<"------------"<< std::endl;
+        //std::cout <<true_ref_of_reads[i] << std::endl;
         for (j = 0; j < ref.size(); ++j)
         {
+        	//std::cout << ref[j] << std::endl;
 	        if (ref[j] == "*")
 	        {
 	        	unmapped++;
@@ -382,7 +415,7 @@ void Analyse_Sim_Result(std::vector<std::vector<std::string>> ref_of_reads,std::
         {
         	error++;
         //	error_read_file << read_name[i] << "\n";
-        	error_read.push_back(read_name[i]);
+        //	error_read.push_back(read_name[i]);
         }
     }
     std::cout << "correct mapped reads:" << (float)mapped << std::endl;
@@ -391,7 +424,7 @@ void Analyse_Sim_Result(std::vector<std::vector<std::string>> ref_of_reads,std::
     std::cout << "total reads:" << total << std::endl;
     std::cout << "correct mapped ratio:" << (float)mapped / total << std::endl;
     std::cout << "incorrect mapped ratio:" << (float) error/ total << std::endl;
-    std::cout << "unmapped ratio:" << (float)unmapped / total << std::endl;
+    std::cout << "unmapped ratio:" << (float)unmapped / total << std::endl << std::endl;
 
 
     if (error_read.size() > 0)
@@ -401,7 +434,7 @@ void Analyse_Sim_Result(std::vector<std::vector<std::string>> ref_of_reads,std::
     	ar(error_read);
     }
 }
-
+/*
 void Analyse_Result_Spherical()
 {
 	std::vector<std::string> error_read_half_vec = Save_Ref_Of_Read();
@@ -418,12 +451,21 @@ void Analyse_Result_Spherical()
         ar(true_ref_of_reads);
     } 
     Analyse_Sim_Result(ref_of_reads,true_ref_of_reads,true_ref_of_reads.size(),true,error_read_half_vec) ;
-}
+}*/
 
-void Analyse_Result(std::string filename,bool flag,std::vector<std::vector<std::string>> &ref_of_reads,int size)
+void Analyse_Result(std::string filename,bool flag,std::vector<std::vector<std::string>> &ref_of_reads)
 {
 	std::ifstream sam(filename);
 //	std::ifstream sam("res/res.sam");
+
+	std::vector<std::string> true_ref_of_reads;
+	/*{
+        //std::ifstream rfile("../art/ref_of_mapping_read.bin");
+        std::ifstream rfile("analyse/true_ref_of_sim_read.bin");
+        cereal::BinaryInputArchive ar(rfile);
+        ar(true_ref_of_reads);
+    }*/
+    std::cout << "load ref of reads finished" << std::endl;
 	char tmp;
 	std::string line;
 	sam.get(tmp);
@@ -441,7 +483,6 @@ void Analyse_Result(std::string filename,bool flag,std::vector<std::vector<std::
 	
 
 	std::string true_ref_name;
-	std::vector<std::string> true_ref_of_reads;
 
 	std::string str;
 	int count = 0;
@@ -449,32 +490,34 @@ void Analyse_Result(std::string filename,bool flag,std::vector<std::vector<std::
 	count++;
 	std::stringstream ss(line);
 	ss >> read_name >> str >> ref_name;
-	ref_name = ref_name.substr(0,ref_name.find_first_of("."));
+	//ref_name = ref_name.substr(0,ref_name.find_first_of("."));
 //	ss >> read_name;
 //	ref_name = read_name.substr(0,ref_name.find_first_of("-"));
 	last_read_name = read_name;
 	int read_size = 0;
-	while(sam.peek() != EOF)
+	for(int i = 0;sam.peek() != EOF;i++)
 	{
 		if(read_name.compare(last_read_name) == 0)
 		{
 			ref_name_vec.push_back(ref_name);
 			read_size++;
-		//	std::cout << ref_name << std::endl;
+			//std::cout << ref_name << std::endl;
 		}else
 		{
+			//std::cout << read_name << std::endl;
 		//	std::cout << std::endl;
 			ref_of_reads.push_back(ref_name_vec);
 			ref_name_vec.clear();
 			ref_name_vec.push_back(ref_name);
-		//	std::cout << ref_name << std::endl;
 
-			last_read_name = last_read_name.substr(last_read_name.find_first_of(":") + 1,last_read_name.size());
-			last_read_name = last_read_name.substr(last_read_name.find_first_of(":") + 1,last_read_name.size());
+			//last_read_name = last_read_name.substr(last_read_name.find_first_of(":") + 1,last_read_name.size());
+			//last_read_name = last_read_name.substr(last_read_name.find_first_of(":") + 1,last_read_name.size());
 			
 			if (!flag)
 			{
-				true_ref_name = last_read_name.substr(0,last_read_name.find_first_of(":"));
+				//true_ref_name = last_read_name.substr(0,last_read_name.find_first_of(":"));
+				true_ref_name = last_read_name.substr(0, last_read_name.find_first_of("-"));
+				//std::cout << true_ref_name << std::endl;
 				true_ref_of_reads.push_back(true_ref_name);
 			}
 		}
@@ -485,7 +528,7 @@ void Analyse_Result(std::string filename,bool flag,std::vector<std::vector<std::
 		count++;
 		std::stringstream ss(line);
 		ss >> read_name >> str >> ref_name;
-		ref_name = ref_name.substr(0,ref_name.find_first_of("."));
+		//ref_name = ref_name.substr(0,ref_name.find_first_of("."));
 
 	//	ss >> read_name;
 	//	ref_name = read_name.substr(0,ref_name.find_first_of("-"));
@@ -493,8 +536,8 @@ void Analyse_Result(std::string filename,bool flag,std::vector<std::vector<std::
 	std::cout << filename << std::endl;
 	if (!flag)
 	{
-		std::cout << "read size:" << ref_of_reads.size() << std::endl;
-		Analyse_Sim_Result(ref_of_reads,true_ref_of_reads,size,false);
+		//std::cout << "read size:" << ref_of_reads.size() << std::endl;
+		Analyse_Sim_Result(ref_of_reads,true_ref_of_reads,false);
 	}else
 	{
 		Analyse_True_Result(ref_of_reads);
@@ -592,7 +635,7 @@ void Intersection_Of_Three_Results(std::vector<std::vector<std::string>> ref_of_
 			sort(ref_3.begin(),ref_3.end());
 			for (int i = 0; i < ref_1.size(); ++i)
 			{
-				if (ref_1[i].compare(ref_2[i]) == 0 && ref_1[i].compare(ref_3[i]) == 0 && ref_2[i].compare(ref_3[i]) == 0)
+				if (ref_1[i].compare(ref_2[i]) == 0 && ref_1[i].compare(ref_3[i]) == 0)
 				{
 					continue;
 				}else

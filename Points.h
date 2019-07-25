@@ -108,7 +108,13 @@ public :
 
 	void ReleaseMem()
 	{
-		all_reads.close();
+		for (int i = 0; i < nP; ++i)
+	    {
+	        delete [] d[i];
+	    }
+	    delete [] d;
+	    d = NULL;
+		//all_reads.close();
 	}
 
 	

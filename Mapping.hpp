@@ -34,7 +34,7 @@ private:
     // BBhash perfect hash function
     sa_boophf_t * sa_bphf = NULL;
 
-    const int buffer_size = 10000;
+    const int buffer_size = 500000;
 
     std::vector<std::string> region_kmer;
 
@@ -88,8 +88,9 @@ public:
     
     void Get_Read_Region(Points &read_1_buff,Points &read_2_buff);
 
+    void Resize_Hashcode(std::vector<bitset<BCODE_LEN>> &ref_code_vec);
 
-    std::pair<int,std::vector<int>> Mapping_Process(size_t read_region,std::vector<unsigned long> &reduced_region_code,bitset<BCODE_LEN> bCodeRead,int pair);
+    std::pair<int,std::vector<int>> Mapping_Process(size_t read_region, std::vector<bitset<BCODE_LEN>> &reduced_region_code,bitset<BCODE_LEN> bCodeRead,int pair);
 
     int Hash_Mapping_with_SA(Points &read_1_buff,Points &read_2_buff);
 

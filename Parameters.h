@@ -3,7 +3,10 @@
 #define	REAL_TYPE				double
 
 // binary code length
-#define BCODE_LEN				27		
+#define BCODE_LEN				27
+
+#define BCODE_64				64
+#define BCODE_128				128
 
 // number of training samples for spherical hashing
 #define NUM_TRAIN_SAMPLES		10000
@@ -11,7 +14,7 @@
 // desired portion of training set inside of one hyper-sphere
 #define INCLUDING_RATIO			0.5
 // desired portion of training set inside of two hyper-spheres
-#define OVERLAP_RATIO			0.20
+#define OVERLAP_RATIO			0.25
 
 // e_m and e_s
 #define EPSILON_MEAN			0.10
@@ -51,8 +54,8 @@
 #define PAIR_1_DIS_FILE			"tmp/tmp_dis_1.bin"
 #define PAIR_2_DIS_FILE			"tmp/tmp_dis_2.bin"
 
-//#define PAIR_1_RES_FILE			"res/res_1.txt"
-//#define PAIR_2_RES_FILE			"res/res_2.txt"
+#define PAIR_1_RES_FILE			"res/res_1.txt"
+#define PAIR_2_RES_FILE			"res/res_2.txt"
 #define PAIR_1_NAME_FILE		"tmp/read_name.bin"
 #define REF_HASH_FILE			"bin/ref_code.bin"
 

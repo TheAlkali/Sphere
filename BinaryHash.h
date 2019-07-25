@@ -64,23 +64,15 @@ public :
 
 	void ReleaseMem();
 
-	template<typename ArgType>
-	__inline void Compute_BCode(ArgType *x, bitset<BCODE_LEN> &y,bool is_read)
+	template<typename argType, typename bitType>
+	__inline void compute(argType *x, bitType &y, int start, int idx)
 	{
-		int start;
-		if (is_read)
-		{
-			start = Parameter::region_searching + Parameter::skip;	
-		}else
-		{
-			start = Parameter::region_searching;
-		}
 	#ifdef USE_PARALLELIZATION
 		#pragma omp parallel for
 	#endif
-		for(int i = 0;i < code_len;i++)
+		for(int i = idx;i < idx + y.size();i++)
 		{
-			ArgType dis = Compute_Distance_L2Sq<REAL_TYPE>( s[i].c , x , dim , start);
+			argType dis = Compute_Distance_L2Sq<REAL_TYPE>( s[i].c , x , dim , start);
 			if( dis - s[i].rSq > 0.000001)
 			{
 				y[i] = 0;
@@ -94,6 +86,26 @@ public :
 			start += 1;
 		}
 	//	std::cout << y << std::endl;
+	}
+
+	template<typename argType>
+	__inline void Compute_BCode_Read(argType *x, bitset<BCODE_LEN> &y)
+	{
+		int start;
+		
+		start = Parameter::region_searching + Parameter::skip;	
+	
+		compute<argType, bitset<BCODE_LEN>>(x, y, start, 0);
+	}
+
+	template<typename argType>
+	__inline void Compute_BCode_Ref(argType *x, bitset<BCODE_64> &y, int idx)
+	{
+		int start;
+	
+		start = Parameter::region_searching + idx;
+		
+		compute<argType, bitset<BCODE_64>>(x, y, start, idx);
 	}
 
 	void Save_Sphere_Info();
