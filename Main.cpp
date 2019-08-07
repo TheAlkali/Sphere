@@ -15,11 +15,13 @@ int main(int argc, char const *argv[])
 //int main()
 {	
 	std::string par;
-	Parameter::dim = 143;
+	Parameter::dim = 50;
+	Parameter::bcode_len = 32;
+	Parameter::tolerance = 4;
 	Parameter::type = "mapping";
-	Parameter::read_file_1 = "dataset/srrdata/sim_read_small_250_1.fastq";
-	Parameter::read_file_2 = "dataset/srrdata/sim_read_small_250_2.fastq";
-	Parameter::sam = "testbp_107bits.sam";
+	Parameter::read_file_1 = "../SpheriHash/dataset/srrdata/SRR5337025_paired_1.fastq";
+	Parameter::read_file_2 = "../SpheriHash/dataset/srrdata/SRR5337025_paired_2.fastq";
+	Parameter::sam = "res/SRR5337025_32bits.sam";
 	Parameter::transcripts_file_name = "/home/yxt/Documents/work/RNA-seq/reference/transcripts/Homo_sapiens.GRCh38.cdna.all.fa";
 	for (int i = 0; i < argc; ++i)
 	{
@@ -94,25 +96,26 @@ int main(int argc, char const *argv[])
     	int read_size = fparser.store_reads(read_1_buff, read_2_buff, Parameter::read_file_1, Parameter::read_file_2);
 
     	Mapping *map = new Mapping(Parameter::dim, rpro);
+
 		map->Load_Spherical_Hashing(read_size,Parameter::bcode_len,Parameter::kmer);
+
+
+		map->Hashing_Reads(read_1_buff,read_2_buff);
+		map->Get_Read_Region(read_1_buff,read_2_buff);
+
+		read_2_buff.ReleaseMem();
+		read_1_buff.ReleaseMem();
+		
 		map->Load_SA(Parameter::kmer);
 
-		Stopwatch T2("");
-		T2.Reset();     T2.Start();
-		std::cout <<"- Analysis of read region ..." << std::endl;
-		map->Get_Read_Region(read_1_buff,read_2_buff);
-		T2.Stop();
-		std::cout << "- Analysis Finished(" << T2.GetTime() << " seconds)" << std::endl;
+		map->Hash_Mapping_with_SA();
 
-		map->Hash_Mapping_with_SA(read_1_buff,read_2_buff);
-
-		read_1_buff.ReleaseMem();
-		read_2_buff.ReleaseMem();
-
-		/*map->Load_Ref_Info();
+		/*
+		map->Load_Ref_Info();
 		map->Output_Result(PAIR_1,read_1_buff);
 		map->Output_Result(PAIR_2,read_2_buff);*/
 
+		
 	 	SAMwriter *sp = new SAMwriter(Parameter::dim, read_size); 
 	 	sp->Transfer_Info_From_Mapping(map->is_read_1_rev,map->is_read_2_rev);//,map->read_1_buff,map->read_2_buff);
 	 	delete map;
@@ -120,10 +123,8 @@ int main(int argc, char const *argv[])
 		sp->Analyse_Result_Pair(rpro);
 
 		read_size = fparser.store_reads(read_1_buff, read_2_buff, Parameter::read_file_1, Parameter::read_file_2);
-		T2.Reset();     T2.Start();
+		
 		sp->Generate_SAM(read_1_buff,read_2_buff,Parameter::sam);
-		T2.Stop();
-		printf("- Generate SAM File Finished (%f seconds)\n",T2.GetTime());
 		T0.Stop();
 		printf("- Total Running Time (%f seconds)\n",T0.GetTime() );
 	}

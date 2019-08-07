@@ -75,11 +75,11 @@ public :
 			argType dis = Compute_Distance_L2Sq<REAL_TYPE>( s[i].c , x , dim , start);
 			if( dis - s[i].rSq > 0.000001)
 			{
-				y[i] = 0;
+				y.set(i, 0);
 			}
 			else
 			{
-				y[i] = 1;
+				y.set(i, 1);
 			}
 		//	std::cout << dis << " " << s[i].rSq << " " << y[i] << std::endl;
 		//	start += dim;

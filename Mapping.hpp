@@ -49,6 +49,11 @@ private:
     std::vector<uint64_t> forward_read_2_region;  
     std::vector<uint64_t> rc_read_2_region;  
 
+    std::vector<bitset<BCODE_LEN>> read_code_1;
+    std::vector<bitset<BCODE_LEN>> read_code_2;
+    std::vector<bitset<BCODE_LEN>> rev_read_code_1;
+    std::vector<bitset<BCODE_LEN>> rev_read_code_2;
+
     std::vector<std::string> ref_name;
     std::vector<int> loc_to_ref;
 
@@ -92,7 +97,9 @@ public:
 
     std::pair<int,std::vector<int>> Mapping_Process(size_t read_region, std::vector<bitset<BCODE_LEN>> &reduced_region_code,bitset<BCODE_LEN> bCodeRead,int pair);
 
-    int Hash_Mapping_with_SA(Points &read_1_buff,Points &read_2_buff);
+    void Hashing_Reads(Points &read_1_buff,Points &read_2_buff);
+
+    int Hash_Mapping_with_SA();
 
     void Load_Ref_Info();
 

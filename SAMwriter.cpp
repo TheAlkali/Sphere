@@ -57,6 +57,7 @@ void SAMwriter::Analyse_Result(int pair,std::vector<size_t> &code_bucket,std::ve
     size_t ref_loc = 0;
     int loc_size = 0;
     int read_size = mres.min_code_idx.size();
+    //std::cout << read_size << std::endl;
     ra_of_read.resize(read_size);
     std::vector<res_analysis> ra_vec;
     res_analysis ra;
@@ -310,6 +311,33 @@ void SAMwriter::Set_Flag(SAM_format &read,int idx,int is_rc,int rdx)
 	read.flag.push_back(flag);
 }
 
+void SAMwriter::SetUmapped(SAM_format &read, SAM_format &next_read, int size, int i)
+{
+	next_read.qname = read.qname;
+	read.rname.push_back("*");
+	next_read.rname.push_back("*");
+	read.pos.push_back(0);
+	next_read.pos.push_back(0);
+	read.pnext.push_back(0);
+	next_read.pnext.push_back(0);
+	read.tlen.push_back(0);
+	next_read.tlen.push_back(0);
+
+	Set_Flag(read,i,is_read_1_rev[size + i],0);
+	Set_Flag(next_read,i,is_read_2_rev[size + i],0);
+
+	read.rnext = "*";
+	next_read.rnext = "*";
+	read.mapq.push_back(255);
+	next_read.mapq.push_back(255);
+
+
+	read.cigar = "*";
+	next_read.cigar = "*";
+	read.tlen.push_back(0);
+	next_read.tlen.push_back(0);
+}
+
 void SAMwriter::Generate_SAM(Points &read_1_buff,Points &read_2_buff,std::string sam_file)
 {
 	std::ofstream samfile(sam_file);
@@ -331,13 +359,19 @@ void SAMwriter::Generate_SAM(Points &read_1_buff,Points &read_2_buff,std::string
 //    read_1_buff.Initialize_MemoryMapped(USED_READ_FILE_NAME_1,read_size,dim);
 //	read_2_buff.Initialize_MemoryMapped(USED_READ_FILE_NAME_2,read_size,dim);
 
+    Stopwatch T2("");
+    T2.Reset();     T2.Start();
+
     std::vector<SAM_format> read,next_read;
     std::vector<int> ref;
     std::string dim_str = std::to_string(dim);
     int ref_size = 0;
-    int buffer_size = 0;
+    int buffer_size = READ_BUFFER_SIZE;
     REAL_TYPE *read_1,*read_2;
     int pos_1 = 0,pos_2 = 0;
+    std::ofstream out("read_test.txt");
+    bool test = false;
+
     for (int size = 0; size < read_size; size += buffer_size)
     {
     	if (read_size - size > READ_BUFFER_SIZE)
@@ -384,7 +418,15 @@ void SAMwriter::Generate_SAM(Points &read_1_buff,Points &read_2_buff,std::string
 		    		pos_1 = pos_1_of_ref_of_merged_res[size + i][j] - Parameter::skip;
 		    		if (pos_1 <= 0)
 		    		{
-		    			continue;
+		    			if (ref_size > 1)
+		    			{
+		    				continue;
+		    			}else
+		    			{
+		    				res_from_which_pair[size + i] = 0;
+		    				SetUmapped(read[i], next_read[i], size, i);
+		    				break;
+		    			}
 		    		}
 	    			read[i].pos.push_back(pos_1);
 
@@ -422,7 +464,15 @@ void SAMwriter::Generate_SAM(Points &read_1_buff,Points &read_2_buff,std::string
 		    		pos_1 = pos_2_of_ref_of_merged_res[size + i][j] - Parameter::skip;
 		    		if (pos_1 <= 0)
 		    		{
-		    			continue;
+		    			if (ref_size > 1)
+		    			{
+		    				continue;
+		    			}else
+		    			{
+		    				res_from_which_pair[size + i] = 0;
+		    				SetUmapped(read[i], next_read[i], size, i);
+		    				break;
+		    			}
 		    		}
 	    			read[i].pos.push_back(pos_1);
 
@@ -454,14 +504,26 @@ void SAMwriter::Generate_SAM(Points &read_1_buff,Points &read_2_buff,std::string
 		    	{
 		    		pos_1 = pos_1_of_ref_of_merged_res[size + i][j] - Parameter::skip;
 		    		pos_2 = pos_2_of_ref_of_merged_res[size + i][j] - Parameter::skip;
-		    		if (pos_1 <= 0 )
+		    		if (pos_1 <= 0 || pos_2 <= 0)
 		    		{
-		    			pos_1 = pos_1_of_ref_of_merged_res[size + i][j] ;
+		    			if (ref_size > 1)
+		    			{
+		    				continue;
+		    			}else
+		    			{
+		    				res_from_which_pair[size + i] = 0;
+		    				SetUmapped(read[i], next_read[i], size, i);
+		    				break;
+		    			}
+		    		}
+		    		/*if (pos_1 <= 0 )
+		    		{
+		    			pos_1 = pos_1_of_ref_of_merged_res[size + i][j];
 		    		}
 		    		if (pos_2 <= 0 )
 		    		{
 		    			pos_2 = pos_2_of_ref_of_merged_res[size + i][j];
-		    		}
+		    		}*/
 		    		read[i].pos.push_back(pos_1);
 		    		next_read[i].pos.push_back(pos_2);
 
@@ -496,29 +558,7 @@ void SAMwriter::Generate_SAM(Points &read_1_buff,Points &read_2_buff,std::string
 		    	}
 	    	}else if (res_from_which_pair[size + i] == 0)
 	    	{
-	    		next_read[i].qname = read[i].qname;
-	    		read[i].rname.push_back("*");
-		    	next_read[i].rname.push_back("*");
-		    	read[i].pos.push_back(0);
-		    	next_read[i].pos.push_back(0);
-		    	read[i].pnext.push_back(0);
-		    	next_read[i].pnext.push_back(0);
-		    	read[i].tlen.push_back(0);
-		    	next_read[i].tlen.push_back(0);
-
-		    	Set_Flag(read[i],i,is_read_1_rev[size + i],0);
-		    	Set_Flag(next_read[i],i,is_read_2_rev[size + i],0);
-
-		    	read[i].rnext = "*";
-		    	next_read[i].rnext = "*";
-		    	read[i].mapq.push_back(255);
-		    	next_read[i].mapq.push_back(255);
-
-
-		    	read[i].cigar = "*";
-		    	next_read[i].cigar = "*";
-		    	read[i].tlen.push_back(0);
-		    	next_read[i].tlen.push_back(0);
+	    		SetUmapped(read[i], next_read[i], size, i);
 	    	}
 	    	delete read_1;
 	    	delete read_2;
@@ -529,6 +569,11 @@ void SAMwriter::Generate_SAM(Points &read_1_buff,Points &read_2_buff,std::string
 	    //	std::cout <<size+i << std::endl;
 	    	for (int j = 0; j < read[i].rname.size(); ++j)
 	    	{
+	    		if (!test)
+	    		{
+	    			out << read[i].qname << std::endl;
+	    			test = true;
+	    		}
 	    		read[i].oidx = j;
 	    		samfile << read[i];
 		    	if (res_from_which_pair[size + i] == 3 || res_from_which_pair[size + i] == 0)
@@ -538,6 +583,7 @@ void SAMwriter::Generate_SAM(Points &read_1_buff,Points &read_2_buff,std::string
 		    		samfile << next_read[i];
 		    	}
 	    	}
+	    	test = false;
 	    }
 	}
     samfile.close();
@@ -545,4 +591,6 @@ void SAMwriter::Generate_SAM(Points &read_1_buff,Points &read_2_buff,std::string
 	read_2_buff.ReleaseMem();
 	read_1_buff.ReleaseMem();
 	system("rm tmp/*");
+	T2.Stop();
+	printf("- Generate SAM File Finished (%f seconds)\n",T2.GetTime());
 }

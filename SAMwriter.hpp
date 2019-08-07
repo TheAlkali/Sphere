@@ -104,5 +104,7 @@ public:
 	
 	void Set_Flag(SAM_format &read,int idx,int is_rc,int rdx);
 
+	void SetUmapped(SAM_format &read, SAM_format &next_read, int size, int i);
+
 	void Generate_SAM(Points &read_1_buff,Points &read_2_buff,std::string sam_file);	
 };

@@ -3,7 +3,7 @@
 #define	REAL_TYPE				double
 
 // binary code length
-#define BCODE_LEN				27
+#define BCODE_LEN				97
 
 #define BCODE_64				64
 #define BCODE_128				128
@@ -60,8 +60,8 @@
 #define REF_HASH_FILE			"bin/ref_code.bin"
 
 
-#define CODE_BUFFER_SIZE		200000	//
-#define READ_BUFFER_SIZE		1000000
+#define CODE_BUFFER_SIZE		100000	//
+#define READ_BUFFER_SIZE		100000
 
 
 // to disable parallelization, comment out this
