@@ -457,6 +457,7 @@ void Mapping::Get_Read_Region(Points &read_1_buff,Points &read_2_buff)
     if(!read_1_region_file.is_open())
     {
         perror(PAIR_1_REGION_FILE);
+        exit(0);
     }
 
     read_2_region_file.open(PAIR_2_REGION_FILE,std::ios::binary);
@@ -464,6 +465,7 @@ void Mapping::Get_Read_Region(Points &read_1_buff,Points &read_2_buff)
     if(!read_2_region_file.is_open())
     {
         perror(PAIR_2_REGION_FILE);
+        exit(0);
     }
 
     {

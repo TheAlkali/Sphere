@@ -104,7 +104,8 @@ FastxParser::filetype__ FastxParser::get_file_type(std::ifstream &file){
 void FastxParser::open_seqfile(std::string filename){
 	seqfile__.open(filename,std::ifstream::binary);//|std::fstream::in);
 	if(!seqfile__.is_open()){
-		std::cout<<"fail to open fasta/fastq files:" << filename << std::endl;
+		std::cerr<<"fail to open fasta/fastq files:" << filename << std::endl;
+		exit(0);
 	}
 }
 
@@ -113,9 +114,11 @@ void FastxParser::open_seqfile(std::string filename1,std::string filename2){
 	seqfile2__.open(filename2,std::ifstream::binary);//,std::fstream::in);
 	if(!seqfile__.is_open()){
 		std::cerr<<"fail to open fasta/fastq files:" << filename1 << std::endl;
+		exit(0);
 	}
 	if(!seqfile2__.is_open()){
 		std::cerr<<"fail to open fasta/fastq files:" << filename2 << std::endl;
+		exit(0);
 	}
 }
 

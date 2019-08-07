@@ -95,6 +95,11 @@ void SphericalHashing::Load_Sphere_Info(int _code_len,int _seg_len)
 
 	std::ifstream file;
 	file.open("bin/sphere_info.log");
+	if (!file.is_open())
+	{
+		perror("bin/sphere_info.log");
+		exit(0);
+	}
 	std::string tmp;
 
 	s = new Sphere [ code_len ];
