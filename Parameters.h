@@ -3,7 +3,7 @@
 #define	REAL_TYPE				double
 
 // binary code length
-#define BCODE_LEN				97
+#define BCODE_LEN				128
 
 #define BCODE_64				64
 #define BCODE_128				128

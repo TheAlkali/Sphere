@@ -80,7 +80,9 @@ void Mapping::Compute_All_Ref_Code()
             for (int k = 0; k < dim; ++k)
             {
                 seq[k] = ictoi_table[ref_string[sarry.con[j] + k]];
+                //std::cout << seq[k];
             }
+            //std::cout << std::endl;
             src_sh.Compute_BCode_Ref<REAL_TYPE>(seq,bCodeRef_1, 0);
             //std::cout << bCodeRef_1 << std::endl;
             src_sh.Compute_BCode_Ref<REAL_TYPE>(seq,bCodeRef_2, BCODE_64);
@@ -570,11 +572,11 @@ void Mapping:: Resize_Hashcode(std::vector<bitset<BCODE_LEN>> &ref_code_vec)
     
     bitset<BCODE_LEN> code;
     bitset<BCODE_64> tmp_code;
-    std::cout << size << std::endl;
+    //std::cout << size << std::endl;
     ref_code_vec.resize(size);
 
     T0.Reset();     T0.Start();
-    if (BCODE_LEN < BCODE_64)
+    if (Parameter::bcode_len < BCODE_64)
     {
     #ifdef USE_PARALLELIZATION
         #pragma omp parallel for private(tmp_code, code) num_threads(Parameter::thread)
@@ -582,13 +584,13 @@ void Mapping:: Resize_Hashcode(std::vector<bitset<BCODE_LEN>> &ref_code_vec)
         for (int i = 0; i < size; ++i)
         {
             tmp_code = reduced_region_code[i].first;
-            for (int j = 0; j < BCODE_LEN; ++j)
+            for (int j = 0; j < Parameter::bcode_len; ++j)
             {
                 code[j] = tmp_code[j];
             }
             ref_code_vec[i] = code;
         }
-    }else if (BCODE_LEN == BCODE_64)
+    }else if (Parameter::bcode_len == BCODE_64)
     {
     #ifdef USE_PARALLELIZATION
         #pragma omp parallel for num_threads(Parameter::thread)
@@ -597,7 +599,7 @@ void Mapping:: Resize_Hashcode(std::vector<bitset<BCODE_LEN>> &ref_code_vec)
         {
             ref_code_vec[i] = reduced_region_code[i].first;
         }
-    } else if (BCODE_LEN > BCODE_64 && BCODE_LEN <= BCODE_128)
+    } else if (Parameter::bcode_len > BCODE_64 && Parameter::bcode_len <= BCODE_128)
     {
         
     #ifdef USE_PARALLELIZATION
@@ -621,7 +623,7 @@ void Mapping:: Resize_Hashcode(std::vector<bitset<BCODE_LEN>> &ref_code_vec)
                 std::cout << tmp_code[k];
             }
             std::cout << std::endl;*/
-            for (int j = 0; j < BCODE_LEN - BCODE_64; ++j)
+            for (int j = 0; j < Parameter::bcode_len - BCODE_64; ++j)
             {
                 code[j + 64] = tmp_code[j];
             }

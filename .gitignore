@@ -10,6 +10,6 @@ rapmap
 main
 *.o
 analyse/*
-exp.sh
+test.sh
 
 

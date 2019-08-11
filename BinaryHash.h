@@ -65,14 +65,14 @@ public :
 	void ReleaseMem();
 
 	template<typename argType, typename bitType>
-	__inline void compute(argType *x, bitType &y, int start, int idx)
+	__inline void compute(argType *x, bitType &y, int start, int idx, int len)
 	{
 	#ifdef USE_PARALLELIZATION
 		#pragma omp parallel for
 	#endif
-		for(int i = idx;i < idx + y.size();i++)
+		for(int i = 0;i < len;i++)
 		{
-			argType dis = Compute_Distance_L2Sq<REAL_TYPE>( s[i].c , x , dim , start);
+			argType dis = Compute_Distance_L2Sq<REAL_TYPE>( s[i + idx].c , x , dim , start);
 			if( dis - s[i].rSq > 0.000001)
 			{
 				y.set(i, 0);
@@ -85,7 +85,7 @@ public :
 		//	start += dim;
 			start += 1;
 		}
-	//	std::cout << y << std::endl;
+		//std::cout << y << std::endl;
 	}
 
 	template<typename argType>
@@ -95,7 +95,7 @@ public :
 		
 		start = Parameter::region_searching + Parameter::skip;	
 	
-		compute<argType, bitset<BCODE_LEN>>(x, y, start, 0);
+		compute<argType, bitset<BCODE_LEN>>(x, y, start, 0, Parameter::bcode_len);
 	}
 
 	template<typename argType>
@@ -105,7 +105,7 @@ public :
 	
 		start = Parameter::region_searching + idx;
 		
-		compute<argType, bitset<BCODE_64>>(x, y, start, idx);
+		compute<argType, bitset<BCODE_64>>(x, y, start, idx, BCODE_64);
 	}
 
 	void Save_Sphere_Info();

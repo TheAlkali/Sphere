@@ -15,13 +15,13 @@ int main(int argc, char const *argv[])
 //int main()
 {	
 	std::string par;
-	Parameter::dim = 50;
-	Parameter::bcode_len = 32;
-	Parameter::tolerance = 4;
-	Parameter::type = "mapping";
-	Parameter::read_file_1 = "../SpheriHash/dataset/srrdata/SRR5337025_paired_1.fastq";
-	Parameter::read_file_2 = "../SpheriHash/dataset/srrdata/SRR5337025_paired_2.fastq";
-	Parameter::sam = "res/SRR5337025_32bits.sam";
+	Parameter::dim = 146;
+	Parameter::bcode_len = 128;
+	Parameter::tolerance = 8;
+	Parameter::type = "index";
+	Parameter::read_file_1 = "../SpheriHash/dataset/srrdata/sim_read_100bp_1.fastq";
+	Parameter::read_file_2 = "../SpheriHash/dataset/srrdata/sim_read_100bp_2.fastq";
+	Parameter::sam = "res/sim_100_res.sam";
 	Parameter::transcripts_file_name = "/home/yxt/Documents/work/RNA-seq/reference/transcripts/Homo_sapiens.GRCh38.cdna.all.fa";
 	for (int i = 0; i < argc; ++i)
 	{
@@ -63,6 +63,7 @@ int main(int argc, char const *argv[])
 		}else if (par.compare("-c") == 0)
 		{
 			Parameter::bcode_len = std::atoi(argv[i + 1]);
+			Parameter::dim = (Parameter::bcode_len + Parameter::region_searching + Parameter::skip + Parameter::ignore) + Parameter::kmer - 1;
 		}else if (par.compare("-t") == 0)
 		{
 			Parameter::tolerance = std::atoi(argv[i + 1]);
@@ -71,6 +72,7 @@ int main(int argc, char const *argv[])
 
 	//Parameter::bcode_len = (Parameter::dim - Parameter::region_searching - Parameter::skip - Parameter::ignore) - Parameter::kmer + 1; /// 
 	std::cout << "- hash code length:"<< Parameter::bcode_len << std::endl;
+	std::cout << "- read dim:"<< Parameter::dim << std::endl;
 
 	Stopwatch T0("");
 	T0.Reset();     T0.Start();
