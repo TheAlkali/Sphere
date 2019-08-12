@@ -652,7 +652,6 @@ std::pair<int,std::vector<int>> Mapping::Mapping_Process(size_t read_region,
 //    int min_dis_idx = 0;
     std::vector<int> min_dis_idx;
     int dist = 0;
-
     region_size = rpro->region_end_idx[read_region] - rpro->region_start_idx[read_region];
     if(read_region < rpro->region_start_idx.size() && region_size > 0)
     {

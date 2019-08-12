@@ -15,14 +15,14 @@ int main(int argc, char const *argv[])
 //int main()
 {	
 	std::string par;
-	Parameter::dim = 146;
-	Parameter::bcode_len = 128;
-	Parameter::tolerance = 8;
-	Parameter::type = "index";
-	Parameter::read_file_1 = "../SpheriHash/dataset/srrdata/sim_read_100bp_1.fastq";
-	Parameter::read_file_2 = "../SpheriHash/dataset/srrdata/sim_read_100bp_2.fastq";
+	/*Parameter::dim = 48;
+	Parameter::bcode_len = 30;
+	Parameter::tolerance = 4;
+	Parameter::type = "mapping";
+	Parameter::read_file_1 = "../SpheriHash/dataset/srrdata/SRR5337025_paired_1.fastq";
+	Parameter::read_file_2 = "../SpheriHash/dataset/srrdata/SRR5337025_paired_2.fastq";
 	Parameter::sam = "res/sim_100_res.sam";
-	Parameter::transcripts_file_name = "/home/yxt/Documents/work/RNA-seq/reference/transcripts/Homo_sapiens.GRCh38.cdna.all.fa";
+	Parameter::transcripts_file_name = "/home/yxt/Documents/work/RNA-seq/reference/transcripts/Homo_sapiens.GRCh38.cdna.all.fa";*/
 	for (int i = 0; i < argc; ++i)
 	{
 		par = argv[i];

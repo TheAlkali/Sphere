@@ -84,7 +84,7 @@ int main(int argc, char const *argv[])
 		ref_of_art_sim("dataset/srrdata/sim_read_small_150_1.fastq");
 		std::cout << "analyse ref finished" << std::endl;
 		
-		Analyse_Result("res/sim_100_res.sam",false,bowtie_ref_name_vec, read_name_vec);
+		Analyse_Result("res/sim_150_res.sam",false,bowtie_ref_name_vec, read_name_vec);
 		/*bowtie_ref_name_vec.clear();
 		Analyse_Result("../rapmap_res/sim_150_res.sam",false,bowtie_ref_name_vec, read_name_vec);
 		bowtie_ref_name_vec.clear();
@@ -514,7 +514,7 @@ void Analyse_Result(std::string filename,bool flag,std::vector<std::vector<std::
 	count++;
 	std::stringstream ss(line);
 	ss >> read_name >> str >> ref_name;
-	ref_name = ref_name.substr(0,ref_name.find_first_of("."));
+	//ref_name = ref_name.substr(0,ref_name.find_first_of("."));
 //	ss >> read_name;
 //	ref_name = read_name.substr(0,ref_name.find_first_of("-"));
 	last_read_name = read_name;
@@ -536,13 +536,13 @@ void Analyse_Result(std::string filename,bool flag,std::vector<std::vector<std::
 			//read_name_vec[read_name] = read_size;
 			ref_name_vec.push_back(ref_name);
 
-			last_read_name = last_read_name.substr(last_read_name.find_first_of(":") + 1,last_read_name.size());
-			last_read_name = last_read_name.substr(last_read_name.find_first_of(":") + 1,last_read_name.size());
+			//last_read_name = last_read_name.substr(last_read_name.find_first_of(":") + 1,last_read_name.size());
+			//last_read_name = last_read_name.substr(last_read_name.find_first_of(":") + 1,last_read_name.size());
 			
 			if (!flag)
 			{
-				true_ref_name = last_read_name.substr(0,last_read_name.find_first_of(":"));
-				//true_ref_name = last_read_name.substr(0, last_read_name.find_first_of("-"));
+				//true_ref_name = last_read_name.substr(0,last_read_name.find_first_of(":"));
+				true_ref_name = last_read_name.substr(0, last_read_name.find_first_of("-"));
 				//std::cout << true_ref_name << std::endl;
 				true_ref_of_reads.push_back(true_ref_name);
 			}
@@ -554,7 +554,7 @@ void Analyse_Result(std::string filename,bool flag,std::vector<std::vector<std::
 		count++;
 		std::stringstream ss(line);
 		ss >> read_name >> str >> ref_name;
-		ref_name = ref_name.substr(0,ref_name.find_first_of("."));
+		//ref_name = ref_name.substr(0,ref_name.find_first_of("."));
 
 	//	ss >> read_name;
 	//	ref_name = read_name.substr(0,ref_name.find_first_of("-"));
